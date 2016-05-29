@@ -1,0 +1,15 @@
+% layout 'default';
+% title 'Test';
+% use Data::Dumper;
+
+% if (keys %$jobs) {
+%	foreach (keys %$jobs) {
+%# =		Dumper($$jobs{$_});
+<br>
+%	}
+<hr>
+%=	$line
+% } else {
+	<li>Nothing</li>
+% }
+
