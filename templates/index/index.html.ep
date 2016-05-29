@@ -8,9 +8,9 @@
 	</form>
 
 	<hr>
-% if (keys %$jobs) {
+% if (keys %{$jobs}) {
 	<li>Running process</li>
-%	foreach (sort {$a <=> $b} keys %$jobs) {
+%	foreach (sort {$a <=> $b} keys %{$jobs}) {
 	pid = <a href="/status?pid=<%= $_ %>" target="_blank"><%= $_ %></a> (<%= $jobs->{$_}->{command} %>) <a href="/killer?pid=<%= $_ %>">kill</a><br>
 %	}
 % } else {

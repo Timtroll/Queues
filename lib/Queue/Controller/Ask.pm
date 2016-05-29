@@ -1,7 +1,4 @@
-package Queue::Controller::Put;
-
-use strict;
-use warnings;
+package Queue::Controller::Ask;
 
 use Mojo::Base 'Mojolicious::Controller';
 
@@ -10,7 +7,7 @@ use Data::Dumper;
 
 use common;
 
-sub queue_put {
+sub queue_ask {
 	my ($self, $json_xs, $out, $ext, $error, $queue_id, %in);
 	$self = shift;
 
@@ -56,7 +53,7 @@ print Dumper(\%in);
 
 	# make conversion
 	unless ($error) {
-		if ($in{'conversion_type'} eq 'pdf2jpg') {
+		if ($in{'conversion_type'} eq 'pdf2jpg')		{
 			$queue_id = pdf2jpg($self, \%in, $config);
 		}
 		elsif ($in{'conversion_type'} eq 'psd2jpg')	{ $queue_id = psd2jpg(\%in, $config); }

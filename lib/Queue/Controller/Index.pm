@@ -1,26 +1,17 @@
 package Queue::Controller::Index;
 
-use Mojo::Base 'Mojolicious::Controller';
+use strict;
+use warnings;
 
-use Socket;
-use IO::Select;
-use IO::Handle;
+use Mojo::Base 'Mojolicious::Controller';
 
 use common;
 
 use Data::Dumper;
 
 sub index {
-	my ($self, $jobs, $line, %data);
+	my ($self, $jobs, %data);
 	$self = shift;
-
-	# check exists pids
-	foreach (%{$pids}) {
-		# Get info from running tasks
-		if ($_) {
-			info_job($_);
-		}
-	}
 
 	%data = (
 		jobs	=> $pids,
@@ -31,13 +22,13 @@ sub index {
 }
 
 sub addjob {
-	my ($self, $line, $job_num, $pid, $url, $msg, %data);
+	my ($self, $line, $job_num, $jobs, $pid, $url, $msg, %data);
 	$self = shift;
 
 	# Add tasks to your application
 	$url = $self->param('url');
 
-	($pids, $pid) = create_job("ping $url");
+	$pid = create_job("ping $url");
 	if ($pid) {
 		$msg = "You ran process pid=$pid";
 	}
@@ -56,24 +47,24 @@ sub status {
 	$self = shift;
 
 	# Get info from running tasks
-	($jobs, $line) = info_job($self->param('pid'));
+	$line = info_job($self->param('pid'));
 
 	# Render template "index/status.html.ep" with message
 	%data = (
-		jobs	=> $jobs, 
+		jobs	=> $pids, 
 		line	=> $line
 	);
 	$self->render('index/status', %data);
 }
 
 sub killer {
-	my ($self, $pid, %data);
+	my ($self, $pid, $jobs, %data);
 	$self = shift;
 
 	# kill exists process
 	$pid = $self->param('pid');
 	if ($pid) {
-		if ($pids->{$pid}) {
+		if ($$pids{$pid}) {
 			# kill process
 			kill_process($pid);
 		}

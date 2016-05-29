@@ -1,5 +1,8 @@
 package Queue;
 
+use strict;
+use warnings;
+
 use Mojo::Base 'Mojolicious';
 use Mojolicious::Plugin::Database;
 use Mojolicious::Plugin::Config;
