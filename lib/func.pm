@@ -19,9 +19,10 @@ $| = 1;
 );
 
 sub pdf2jpg {
-	my ($in, $config, $size, $res,
+	my ($self, $in, $config, $size, $res,
 		$page_output, 
-		$cmd);
+		$cmd, $pids, $childid);
+	$self = shift;
 	$in = shift;
 	$config = shift;
 
@@ -39,64 +40,20 @@ sub pdf2jpg {
 	else {
 		$size = '900x900';
 	}
-	$cmd = qq~
-echo "mkdir $config->{'tmp_dir'}"; \
-mkdir $config->{tmp_dir}; \
-echo "$config->{'exec_apps'}->{'pdftk'} $$in{'source'} burst output $config->{'tmp_dir'}/%04d.pdf verbose"; \
-$config->{'exec_apps'}->{'pdftk'} $$in{'source'} burst output $config->{'tmp_dir'}/%04d.pdf verbose; \
-echo "rm $config->{'tmp_dir'}/doc_data.txt"; \
-rm $config->{'tmp_dir'}/doc_data.txt; \
-for i in `ls $config->{tmp_dir}/*[0-9].pdf`; \
-do \
-echo "$config->{'exec_apps'}->{'pdf2swf'} -T 9 -w \$i -O1 $config->{tmp_dir}/out.swf";\
-$config->{'exec_apps'}->{'pdf2swf'} -T 9 -w \$i -O1 $config->{'tmp_dir'}/out.swf; \
-echo "$config->{'exec_apps'}->{'gs'} -dPDFSETTINGS=/printer -dColorImageResolution=72 -dSAFER -dBATCH -dNOPAUSE -sDEVICE=jpeg -r160 -sOutputFile=$config->{'tmp_dir'}/out.jpg \$i";\
-$config->{'exec_apps'}->{'gs'} -dSAFER -dBATCH -dNOPAUSE -sDEVICE=jpeg -r160 -sOutputFile=$config->{'tmp_dir'}/out.jpg \$i; \
-echo "$config->{'exec_apps'}->{'convert'} $config->{tmp_dir}/out.jpg -resize $size -profile $config->{'icm_profile'} $config->{'tmp_dir'}/out.jpg";\
-$config->{'exec_apps'}->{'convert'} $config->{'tmp_dir'}/out.jpg -resize $size -profile $config->{'icm_profile'} $config->{tmp_dir}/out.jpg; \
-done; \
-echo "cp -invR $config->{'tmp_dir'} $$in{'output'}";\
-cp -invR $config->{'tmp_dir'} $$in{'output'}; \
-echo "rm -R $config->{'tmp_dir'}";\
-rm -R $config->{'tmp_dir'};~;
 
-	my ($pids, $childid) = create_job($cmd);
-print "$pids, $childid\n";
-
-=comment
-	# get pdf resolution
-	$res = get_pdf_res($$in{'source'}, $config);
-print Dumper($res);
-
-	$md5_dir = substr($media_md5, 0, 3);
-	$thumb_dir = $proxy_path.$proxy_drive[$media_drive].$md5_dir."/";
-
-	# if pdf has not password protection
-	if ($$res{'error'} != 55) {
-		# split suorce pdf to pages
-		$page_output = $$in{'source'};
-		$page_output =~ /^.*\/(.*?)\.\w+/;
-		$page_output = $1 .".%04d";
-		$proxy = "$thumb_dir/$media_md5.$page_num.jpg";
-		$cmd = "pdftk $$in{'source'} burst output ".$config->{'tmp_dir'}."/$page_output.pdf";
+	$cmd = $self->render_to_string(	
+		'layouts/pdf2jpg',
+		format	=> 'txt',
+		config	=> $config,
+		size	=> $size,
+		in		=> $in
+	);
+	$cmd =~ s/(\r|\n)//goi;
 print "$cmd\n";
 
-		# get list of pages
+	($cmd, $childid) = create_job($cmd);
 
-			# convert pdf page to swf
-			$cmd = "/usr/local/bin/pdf2swf -T 9 -w $page -o $swf_out";
-
-			# convert pdf page to jpg
-			unless ($$in{'source'}) {
-				$$in{'source'} = 72;
-			}
-			$thumb_cmd = "/usr/bin/gs -dSAFER -dBATCH -dNOPAUSE -sDEVICE=jpeg -r$$in{'source'} -sOutputFile=$proxy $page";
-	}
-	else {
-	}
-=cut
-
-	return;
+	return $childid;
 }
 
 sub get_pdf_res {

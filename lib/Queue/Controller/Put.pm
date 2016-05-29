@@ -13,7 +13,7 @@ use func;
 use Data::Dumper;
 
 sub queue_put {
-	my ($self, $json_xs, $out, $ext, $error, %in);
+	my ($self, $json_xs, $out, $ext, $error, $queue_id, %in);
 	$self = shift;
 
 	# get fieilds from request & check required fields
@@ -58,8 +58,10 @@ print Dumper(\%in);
 
 	# make conversion
 	unless ($error) {
-		if ($in{'conversion_type'} eq 'pdf2jpg')		{ pdf2jpg(\%in, $config); }
-		elsif ($in{'conversion_type'} eq 'psd2jpg')	{ psd2jpg(\%in, $config); }
+		if ($in{'conversion_type'} eq 'pdf2jpg')		{
+			$queue_id = pdf2jpg($self, \%in, $config);
+		}
+		elsif ($in{'conversion_type'} eq 'psd2jpg')	{ $queue_id = psd2jpg(\%in, $config); }
 		else {
 			$error++;
 			$out = {
@@ -72,7 +74,7 @@ print Dumper(\%in);
 	unless ($error) {
 		$out = {
 			'status'	=> 201,
-			'queue_id'	=> 123,
+			'queue_id'	=> $queue_id,
 			'start_time'=> time()
 		};
 	}

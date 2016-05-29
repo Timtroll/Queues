@@ -3,7 +3,7 @@ Manufactured by Timothy Zhouravlyuov
 Description API requests and response.
 
 
-===================
+============================================================================
 Put action requests
 === Example ===
 POST/GET request
@@ -25,7 +25,7 @@ answer
 
 {
 	status:		201,				(status according http standard - 201 created pipe)
-	queue_id:	jhg3HyYjhgUYg67,	(queue id for reading messages from opened pipe - md5 hash)
+	queue_id:	4639,				(internal mojolicious queue id for reading messages from opened pipe)
 	start_time:	1456212884			(time of starting conversion in UNIX format)
 }
 
@@ -47,14 +47,14 @@ or
 
 
 
-===================
+============================================================================
 Ask action requests
 === Example ===
 POST/GET request
 
 {
 	action:		ask,
-	queue_id:	jhg3HyYjhgUYg67,	(queue id for reading messages from opened pipe - md5 hash)
+	queue_id:	4639,	(internal mojolicious queue id for reading messages from opened pipe)
 }
 
 answer
@@ -87,14 +87,14 @@ or
 
 
 
-===================
+============================================================================
 Read action requests
 === Example ===
 POST/GET request
 
 {
 	action:		read,
-	queue_id:	jhg3HyYjhgUYg67,	(queue id for reading messages from stored pipe-work messages - md5 hash)
+	queue_id:	4639,		(internal mojolicious queue id for reading messages from opened pipe)
 }
 
 answer
