@@ -50,10 +50,10 @@ sub info_job {
 
 	if ($pids{$pid}) {
 		# prepare read stored handle
-		$sel = IO::Select->new($pids{$pid}{child_fh});
+		$sel = IO::Select->new($pids{$pid}{child_fh}, undef, undef, 0);
 
 		$line = '';
-		while ($sel->can_read()) {
+		while ($sel->can_read(5)) {
 			# choose handle & read output
 			my $fh = $pids{$pid}{child_fh};
 			sysread($fh, $line, 64*1024, length($line));
@@ -75,7 +75,8 @@ sub info_job {
 				@tmp = ();
 			}
 
-			last if defined($line);
+#			last if defined($line);
+			last if $line;
 			chomp $line;
 		}
 
