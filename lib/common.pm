@@ -3,6 +3,7 @@ package common;
 use strict;
 use warnings;
 
+use Digest::MD5 qw(md5_hex);
 use Socket;
 use IO::Select;
 use IO::Handle;
@@ -102,6 +103,7 @@ sub create_job {
 		child_fh	=> undef,
 		parent_fh	=> undef,
 		pid			=> undef
+#		md5			=> md5_hex($job)
 	);
 
 	socketpair($pair{child_fh}, $pair{parent_fh}, AF_UNIX, SOCK_STREAM, PF_UNSPEC) or die "socketpair: $!";
@@ -127,7 +129,7 @@ sub create_job {
 			close $h;
 		}
 
-		exec($job);
+		exec("$job $childid");
 	}
 
 	if ($childid) {

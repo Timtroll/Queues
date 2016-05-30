@@ -48,6 +48,7 @@ sub startup {
 	$r->any('/put')				->to('put#queue_put');
 	$r->any('/ask')				->to('ask#queue_ask');
 	$r->any('/read')			->to('read#queue_read');
+	$r->any('/done')			->to('index#queue_done');
 
 	$r->any('/addjob')			->to('index#addjob');
 	$r->any('/status')			->to('index#status');

@@ -27,3 +27,5 @@ cp -invR <%= $config->{'tmp_dir'} %> <%= $$in{'output'} %>;
 
 echo "rm -R <%= $config->{'tmp_dir'} %>";
 rm -R <%= $config->{'tmp_dir'} %>;
+
+wget http://queue/done;

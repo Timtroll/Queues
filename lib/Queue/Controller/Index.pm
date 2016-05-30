@@ -78,4 +78,19 @@ sub killer {
 	$self->render('index/index', %data);
 }
 
+sub queue_done {
+	my ($self, $pid, $jobs, %data);
+	$self = shift;
+
+	# mark process as completed and store result in DB & remove it from pids storage
+# ???
+
+	%data = (
+		status	=> 200,
+		queue_id=> $pid,
+		msg		=> $config->{'messages'}->{'done'} . $pid
+	);
+	$self->render(json => \%data );
+}
+
 1;

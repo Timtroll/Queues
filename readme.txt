@@ -15,6 +15,7 @@ POST/GET request
 	output:				/home/ouput_dir/,	(output directory for result file/es)
 	quality:			100,				(quality output file/es)
 	resolution:			72,					(resolution output file/es in dpi)
+	password:			textpass,			(password for pdf file)
 	size: {
 		width:	2000,				(width size of output file/es)
 		height:	2000				(height size of output file/es)
@@ -24,9 +25,9 @@ POST/GET request
 answer
 
 {
-	status:		201,				(status according http standard - 201 created pipe)
-	queue_id:	4639,				(internal mojolicious queue id for reading messages from opened pipe)
-	start_time:	1456212884			(time of starting conversion in UNIX format)
+	status:		201,								(status according http standard - 201 created pipe)
+	queue_id:	4639,								(internal mojolicious queue id for reading messages from opened pipe)
+	start_time:	1456212884							(time of starting conversion in UNIX format)
 }
 
 or ERROR
