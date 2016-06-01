@@ -21,7 +21,7 @@ sub index {
 	$self->render('index/index', %data);
 }
 
-sub addjob {
+sub job_add {
 	my ($self, $line, $job_num, $jobs, $pid, $url, $msg, %data);
 	$self = shift;
 
@@ -42,7 +42,7 @@ sub addjob {
 	$self->render('index/test', %data);
 }
 
-sub status {
+sub job_status {
 	my ($self, $jobs, $line, %data);
 	$self = shift;
 
@@ -57,7 +57,7 @@ sub status {
 	$self->render('index/status', %data);
 }
 
-sub killer {
+sub job_kill {
 	my ($self, $pid, $jobs, %data);
 	$self = shift;
 
@@ -66,7 +66,7 @@ sub killer {
 	if ($pid) {
 		if ($$pids{$pid}) {
 			# kill process
-			kill_process($pid);
+			kill_job($pid);
 		}
 	}
 
@@ -78,19 +78,39 @@ sub killer {
 	$self->render('index/index', %data);
 }
 
-sub queue_done {
-	my ($self, $pid, $jobs, %data);
+sub job_done {
+	my ($self, $pid, $out);
 	$self = shift;
 
-	# mark process as completed and store result in DB & remove it from pids storage
-# ???
+	# get all messages & remove process 
+	$pid = $self->param('pid');
+	if ($pid) {
+		if ($$pids{$pid}) {
+			# get all messages & remove process 
+			done_job($pid);
 
-	%data = (
-		status	=> 200,
-		queue_id=> $pid,
-		msg		=> $config->{'messages'}->{'done'} . $pid
-	);
-	$self->render(json => \%data );
+			$out = {
+				status	=> 200,
+				queue_id=> $pid,
+				msg		=> $config->{'messages'}->{'done_job'} . $pid
+			};
+		}
+		else {
+			$out = {
+				status	=> 404,
+				queue_id=> $pid,
+				msg		=> $config->{'messages'}->{'not_exists_job'} . $pid
+			};
+		}
+	}
+	else {
+		$out = {
+			status	=> 400,
+			msg		=> $config->{'messages'}->{'not_exists_job_id'}
+		};
+	}
+
+	$self->render(json => $out );
 }
 
 1;

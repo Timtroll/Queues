@@ -48,11 +48,11 @@ sub startup {
 	$r->any('/put')				->to('put#queue_put');
 	$r->any('/ask')				->to('ask#queue_ask');
 	$r->any('/read')			->to('read#queue_read');
-	$r->any('/done')			->to('index#queue_done');
 
-	$r->any('/addjob')			->to('index#addjob');
-	$r->any('/status')			->to('index#status');
-	$r->any('/killer')			->to('index#killer');
+	$r->any('/addjob')			->to('index#job_add');
+	$r->any('/status')			->to('index#job_status');
+	$r->any('/killer')			->to('index#job_kill');
+	$r->any('/done')			->to('index#job_done');
 
 #	$r->any('/logout')			->to('auth#logout');
 #	my $auth = $r->under()		->to('auth#login');

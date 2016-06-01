@@ -59,7 +59,9 @@ print Dumper(\%in);
 		if ($in{'conversion_type'} eq 'pdf2jpg') {
 			$queue_id = pdf2jpg($self, \%in, $config);
 		}
-		elsif ($in{'conversion_type'} eq 'psd2jpg')	{ $queue_id = psd2jpg(\%in, $config); }
+		elsif ($in{'conversion_type'} eq 'psd2jpg') {
+			$queue_id = psd2jpg(\%in, $config);
+		}
 		else {
 			$error++;
 			$out = {

@@ -22,7 +22,7 @@ $| = 1;
 our @ISA = qw( Exporter );
 our @EXPORT = qw(
 	$config $messages $childs $selread $pids 
-	&info_job &create_job &kill_process &dbg_print &get_pdf_res &pdf2jpg
+	&done_job &info_job &create_job &kill_job &dbg_print &get_pdf_res &pdf2jpg
 );
 
 our ($config, $messages, $childs, $selread, $pids);
@@ -45,15 +45,38 @@ BEGIN {
 $childs = 8;
 %pids = ();
 
-sub info_job {
-	my ($line, $read, $pid, $sel);
+sub done_job {
+	my ($line, $pid);
 	$pid = shift;
 
+	$line = read_line($pid);
+
+}
+
+sub info_job {
+#	my ($line, $read, $pid, $sel);
+	my ($line, $pid, @tmp);
+	$pid = shift;
+
+	$line = read_line($pid);
+print "$line\n";
+	if ($line) {
+		@tmp = split("\n", $line);
+		$line = pop @tmp;
+		@tmp = ();
+
+		return $line;
+	}
+
+	$pids = \%pids;
+	return 0;
+
+=comment
 	if ($pids{$pid}) {
 		# prepare read stored handle
 		$sel = IO::Select->new($pids{$pid}{child_fh}, undef, undef, 0);
 
-		$line = '';
+		$line = undef;
 		while ($sel->can_read(5)) {
 			# choose handle & read output
 			my $fh = $pids{$pid}{child_fh};
@@ -68,7 +91,7 @@ sub info_job {
 				close($fh);
 				$line = undef;
 
-				kill_process($pid);
+				kill_job($pid);
 			}
 			else {
 				my @tmp = split("\n", $line);
@@ -76,8 +99,7 @@ sub info_job {
 				@tmp = ();
 			}
 
-#			last if defined($line);
-			last if $line;
+			last if defined($line);
 			chomp $line;
 		}
 
@@ -87,6 +109,7 @@ sub info_job {
 
 	$pids = \%pids;
 	return 0;
+=cut
 }
 
 sub create_job {
@@ -100,28 +123,26 @@ sub create_job {
 
 	# create socket for job
 	%pair  = (
-		child_fh	=> undef,
-		parent_fh	=> undef,
-		pid			=> undef
-#		md5			=> md5_hex($job)
+		'child_fh'	=> undef,
+		'parent_fh'	=> undef
 	);
 
-	socketpair($pair{child_fh}, $pair{parent_fh}, AF_UNIX, SOCK_STREAM, PF_UNSPEC) or die "socketpair: $!";
+	socketpair($pair{'child_fh'}, $pair{'parent_fh'}, AF_UNIX, SOCK_STREAM, PF_UNSPEC) or die "socketpair: $!";
 
 	$childid = fork;
 	die "cannot fork" if ($childid == -1);
 
-	$pair{pid} = $childid;
-	$pair{command} = $job;
+	$pair{'pid'} = $childid;
+	$pair{'command'} = $job;
 
 	# redirect child outout into opened socket
 	unless ($childid) {
 		# child
-		open STDIN, "<&", $pair{parent_fh};
-		open STDOUT, ">&", $pair{parent_fh};
-		open STDERR, ">&", $pair{parent_fh};
-		close $pair{parent_fh};
-		close $pair{child_fh};
+		open STDIN, "<&", $pair{'parent_fh'};
+		open STDOUT, ">&", $pair{'parent_fh'};
+		open STDERR, ">&", $pair{'parent_fh'};
+		close $pair{'parent_fh'};
+		close $pair{'child_fh'};
 
 		# close inherited handles
 		for my $h ($selread->handles) {
@@ -136,20 +157,20 @@ sub create_job {
 		$pids{$childid} = { %pair };
 	}
 
-	close $pair{parent_fh};
-	$selread->add($pids{$childid}{child_fh});
+	$selread->add($pids{$childid}{'child_fh'});
+	close $pair{'parent_fh'};
 
 	$pids = \%pids;
 	return ($childid);
 }
 
-sub kill_process {
+sub kill_job {
 	my ($pid);
 	$pid = shift;
 
 	# close handles for child process
-	close $pids{$pid}{parent_fh};
-	close $pids{$pid}{child_fh};
+	close $pids{$pid}{parent_fh} if $pids{$pid}{parent_fh};
+	close $pids{$pid}{child_fh} if $pids{$pid}{child_fh};
 
 	# delete child from list
 	delete $pids{$pid};
@@ -158,6 +179,53 @@ sub kill_process {
 	wait;
 
 	$pids = \%pids;
+}
+
+sub read_line {
+	my ($line, $read, $pid, $sel);
+	$pid = shift;
+
+	if ($pids{$pid}) {
+		# prepare read stored handle
+		$sel = IO::Select->new($pids{$pid}{'child_fh'}, undef, undef, 0);
+
+		$line = '';
+		while ($sel->can_read()) {
+			# choose handle & read output
+			my $fh = $pids{$pid}{'child_fh'};
+			sysread($fh, $line, 64*1024, length($line));
+print "=$line";
+# ??????????????
+# we have to store last reply
+
+			# find last line in the output
+			if (!$line) {
+				$sel->remove($fh);
+				close($fh);
+#				$line = undef;
+
+				kill_job($pid);
+print "-\n";
+				last;
+			}
+
+#			last if defined($line);
+print "=\n";
+			last if $line;
+#			chomp $line;
+		}
+	}
+
+
+	$pids = \%pids;
+	if ($line) {
+#		$pids = \%pids;
+		return $line;
+	}
+	else {
+#		$pids = \%pids;
+		return 0;
+	}
 }
 
 # debug output
