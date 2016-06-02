@@ -7,7 +7,7 @@ Description API requests and response.
 Put action requests
 === Example ===
 POST/GET request
-
+url: "/put"
 {
 	action:				put,
 	conversion_type:	pdf2jpg,			(conversion type)
@@ -52,7 +52,7 @@ or
 Ask action requests
 === Example ===
 POST/GET request
-
+url: "/ask"
 {
 	action:		ask,
 	queue_id:	4639,	(internal mojolicious queue id for reading messages from opened pipe)
@@ -92,7 +92,7 @@ or
 Read action requests
 === Example ===
 POST/GET request
-
+url: "/read"
 {
 	action:		read,
 	queue_id:	4639,		(internal mojolicious queue id for reading messages from opened pipe)
@@ -106,6 +106,35 @@ answer
 	message:		'sdf sdf sdf asdf ',	(last message from executing pipe - for 200 status)
 	output_dir:
 	output_files:	[file.jpg, file1.jpg]	(list of output files - for 200 status)
+}
+
+or ERROR
+
+{ status:		400 }				(status according http standard - bad request )
+{ status:		404 }				(status according http standard - asking conversion type is not exist )
+or
+{
+	status:		503,					(status according http standard)
+	reason:		'description of error'
+}
+
+=== End example ===
+
+============================================================================
+Done action requests
+=== Example ===
+POST/GET request
+url: "/dome"
+{
+	action:		done,
+	md5:		ccd648ff6a3af3294871244153b05cc8		(md5 hash for indentify current job)
+}
+
+answer
+
+{
+	status:			200,					(status according http standard - 200 finished pipe-work, 415 unsupported media, 503)
+	message:		'sdf sdf sdf asdf ',	(last message from executing pipe - for 200 status)
 }
 
 or ERROR

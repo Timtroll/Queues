@@ -49,8 +49,34 @@ sub done_job {
 	my ($line, $pid);
 	$pid = shift;
 
-	$line = read_line($pid);
+	# Check exists job & output data from them
+	if (exists $pids{$pid}) {
+		# store output
+		$line = `cat $config->{'socket_dir'}/$pid`;
 
+# ?????????
+# store output
+
+		# delete job from job storage
+		delete $pids{$pid};
+	}
+	else {
+		# store output data recived from job & delete exchange file
+		if (-s "$config->{'socket_dir'}/$pid") {
+			# store output
+			$line = `cat $config->{'socket_dir'}/$pid`;
+
+# ?????????
+# store output
+
+			# delete exchange file
+			unlink("$config->{'socket_dir'}/$pid");
+		}
+	}
+	$line = undef;
+
+	return 1;
+#	$line = read_line($pid);
 }
 
 sub info_job {
@@ -113,14 +139,36 @@ print "$line\n";
 }
 
 sub create_job {
-	my ($childid, $hchild, $hparent, $job, $line, %pair);
+	my ($childid, $hchild, $hparent, $job, $line, $md5, %pair);
 	$job = shift;
+
+	# set up md5 hash for indentify current job
+	$md5 = md5_hex($job.time());
+
+	# add callback request
+	$job .= "\ncurl http://queue/done?pid=$md5;\n"
 
 	# check number of jobs
 	if ($childs <= scalar(keys %pids)) {
 		return 0;
 	}
 
+	# run command in background & write output into file
+print "$job >> $config->{'socket_dir'}/$md5 &";
+	`$job >> $config->{'socket_dir'}/$md5 &`;
+
+	if (-e "$config->{'socket_dir'}/$md5") {
+		# store name of new job md5 hash into job storage and path for output data
+		$pids{$md5} = "$config->{'socket_dir'}/$md5";
+
+		# return name of the job
+		return $md5;
+	}
+	else {
+		return 0;
+	}
+
+=comment
 	# create socket for job
 	%pair  = (
 		'child_fh'	=> undef,
@@ -145,9 +193,9 @@ sub create_job {
 		close $pair{'child_fh'};
 
 		# close inherited handles
-		for my $h ($selread->handles) {
-			$selread->remove($h);
-			close $h;
+		foreach ($selread->handles) {
+			$selread->remove($_);
+			close $_;
 		}
 
 		exec("$job $childid");
@@ -162,6 +210,7 @@ sub create_job {
 
 	$pids = \%pids;
 	return ($childid);
+=cut
 }
 
 sub kill_job {
@@ -189,6 +238,20 @@ sub read_line {
 		# prepare read stored handle
 		$sel = IO::Select->new($pids{$pid}{'child_fh'}, undef, undef, 0);
 
+		my $fh = $pids{$pid}{'child_fh'};
+		if ($fh->eof || $fh->error) {
+			# потомок завершил работу
+			$sel->remove($fh);
+			close $fh;
+			next;
+		}
+		if ($line = <$fh>) {
+# ??????????????
+# we have to store last reply
+			print $line;
+		}
+	}
+=comment
 		$line = '';
 		while ($sel->can_read()) {
 			# choose handle & read output
@@ -215,7 +278,7 @@ print "=\n";
 #			chomp $line;
 		}
 	}
-
+=cut
 
 	$pids = \%pids;
 	if ($line) {
@@ -271,6 +334,7 @@ sub pdf2jpg {
 print "$cmd\n";
 
 	$id = create_job($cmd);
+print Dumper(\%pids);
 
 	return $id;
 }

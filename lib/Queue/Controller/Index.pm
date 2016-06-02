@@ -79,7 +79,7 @@ sub job_kill {
 }
 
 sub job_done {
-	my ($self, $pid, $out);
+	my ($self, $pid, $status, $out);
 	$self = shift;
 
 	# get all messages & remove process 
@@ -87,13 +87,21 @@ sub job_done {
 	if ($pid) {
 		if ($$pids{$pid}) {
 			# get all messages & remove process 
-			done_job($pid);
+			$status = done_job($pid);
 
 			$out = {
-				status	=> 200,
 				queue_id=> $pid,
 				msg		=> $config->{'messages'}->{'done_job'} . $pid
 			};
+			if ($status) {
+				$out->{'status'} = 200;
+			}
+			else {
+				$out = {
+					status	=> 503,
+					msg		=> $config->{'messages'}->{'deleting_error'} . $pid
+				};
+			}
 		}
 		else {
 			$out = {
