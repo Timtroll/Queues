@@ -146,27 +146,34 @@ sub create_job {
 	$md5 = md5_hex($job.time());
 
 	# add callback request
-	$job .= "\ncurl http://queue/done?pid=$md5;\n"
-
+#	$job =~ s/(\r|\n)//goi;
+	$job .= "\ncurl http://queue/done?pid=$md5;\n";
+print "==$job===";
 	# check number of jobs
 	if ($childs <= scalar(keys %pids)) {
 		return 0;
 	}
 
 	# run command in background & write output into file
-print "$job >> $config->{'socket_dir'}/$md5 &";
-	`$job >> $config->{'socket_dir'}/$md5 &`;
+#print "$job > $config->{'socket_dir'}/$md5 &";
+#	`$job > $config->{'socket_dir'}/$md5 &`;
+	`echo '$job' > $config->{'socket_dir'}/$md5.sh`;
+	`chmod +x $config->{'socket_dir'}/$md5.sh`;
+	`$config->{'socket_dir'}/$md5.sh > $config->{'socket_dir'}/$md5 &`;
+	`chmod -x $config->{'socket_dir'}/$md5.sh`;
+#	`rm $config->{'socket_dir'}/$md5.sh &`;
 
-	if (-e "$config->{'socket_dir'}/$md5") {
+#	if (-e "$config->{'socket_dir'}/$md5") {
 		# store name of new job md5 hash into job storage and path for output data
 		$pids{$md5} = "$config->{'socket_dir'}/$md5";
 
 		# return name of the job
+		$pids = \%pids;
 		return $md5;
-	}
-	else {
-		return 0;
-	}
+#	}
+#	else {
+#		return 0;
+#	}
 
 =comment
 	# create socket for job
@@ -245,40 +252,39 @@ sub read_line {
 			close $fh;
 			next;
 		}
-		if ($line = <$fh>) {
-# ??????????????
-# we have to store last reply
-			print $line;
-		}
+#		if ($line = <$fh>) {
+## ??????????????
+## we have to store last reply
+#			print $line;
+#		}
 	}
-=comment
-		$line = '';
-		while ($sel->can_read()) {
-			# choose handle & read output
-			my $fh = $pids{$pid}{'child_fh'};
-			sysread($fh, $line, 64*1024, length($line));
-print "=$line";
-# ??????????????
-# we have to store last reply
 
-			# find last line in the output
-			if (!$line) {
-				$sel->remove($fh);
-				close($fh);
-#				$line = undef;
-
-				kill_job($pid);
-print "-\n";
-				last;
-			}
-
-#			last if defined($line);
-print "=\n";
-			last if $line;
-#			chomp $line;
-		}
-	}
-=cut
+#		$line = '';
+#		while ($sel->can_read()) {
+#			# choose handle & read output
+#			my $fh = $pids{$pid}{'child_fh'};
+#			sysread($fh, $line, 64*1024, length($line));
+#print "=$line";
+## ??????????????
+## we have to store last reply
+#
+#			# find last line in the output
+#			if (!$line) {
+#				$sel->remove($fh);
+#				close($fh);
+##				$line = undef;
+#
+#				kill_job($pid);
+#print "-\n";
+#				last;
+#			}
+#
+##			last if defined($line);
+#print "=\n";
+#			last if $line;
+##			chomp $line;
+#		}
+#	}
 
 	$pids = \%pids;
 	if ($line) {
@@ -330,8 +336,8 @@ sub pdf2jpg {
 		config	=> $config,
 		in		=> $in
 	);
-	$cmd =~ s/(\r|\n)//goi;
-print "$cmd\n";
+#	$cmd =~ s/(\r|\n)//goi;
+#print "$cmd\n";
 
 	$id = create_job($cmd);
 print Dumper(\%pids);

@@ -84,6 +84,7 @@ sub job_done {
 
 	# get all messages & remove process 
 	$pid = $self->param('pid');
+print ">>>>> $pid $$pids{$pid} <<<<<<<";
 	if ($pid) {
 		if ($$pids{$pid}) {
 			# get all messages & remove process 

@@ -1,0 +1,31 @@
+echo "mkdir <%= $config->{'tmp_dir'} %>";
+mkdir <%= $config->{tmp_dir} %>;
+
+
+echo "<%= $config->{'exec_apps'}->{'pdftk'} %> <%= $$in{'source'} %> burst output <%= $config->{'tmp_dir'} %>/%04d.pdf verbose";
+<%= $config->{'exec_apps'}->{'pdftk'} %> <%= $$in{'source'} %> burst output <%= $config->{'tmp_dir'} %>/%04d.pdf verbose;
+
+echo "rm <%= $config->{'tmp_dir'} %>/doc_data.txt";
+rm <%= $config->{'tmp_dir'} %>/doc_data.txt;
+
+
+for i in `ls <%= $config->{tmp_dir} %>/*[0-9].pdf`;
+do \
+
+	echo "<%= $config->{'exec_apps'}->{'pdf2swf'} %> -T 9 -w $i -O1 <%= $config->{tmp_dir} %>/out.swf";
+	<%= $config->{'exec_apps'}->{'pdf2swf'} %> -T 9 -w $i -O1 <%= $config->{'tmp_dir'} %>/out.swf;
+	echo "<%= $config->{'exec_apps'}->{'gs'} %> -dPDFSETTINGS=/printer -dColorImageResolution=$$in{'resolution'} -dSAFER -dBATCH -dNOPAUSE -sDEVICE=jpeg -r160 -sOutputFile=<%= $config->{'tmp_dir'} %>/out.jpg $i";
+
+	<%= $config->{'exec_apps'}->{'gs'} %> -dSAFER -dBATCH -dNOPAUSE -sDEVICE=jpeg -r160 -sOutputFile=<%= $config->{'tmp_dir'} %>/out.jpg $i;
+	echo "<%= $config->{'exec_apps'}->{'convert'} %> <%= $config->{tmp_dir} %>/out.jpg -resize <%= $$in{'size_sum'} %> -profile <%= $config->{'icm_profile'} %> <%= $config->{'tmp_dir'} %>/out.jpg";
+	<%= $config->{'exec_apps'}->{'convert'} %> <%= $config->{'tmp_dir'} %>/out.jpg -resize <%= $$in{'size_sum'} %> -profile <%= $config->{'icm_profile'} %> <%= $config->{tmp_dir} %>/out.jpg;
+
+done;
+
+echo "cp -invR <%= $config->{'tmp_dir'} %> <%= $$in{'output'} %>";
+cp -invR <%= $config->{'tmp_dir'} %> <%= $$in{'output'} %>;
+
+echo "rm -R <%= $config->{'tmp_dir'} %>";
+rm -R <%= $config->{'tmp_dir'} %>;
+
+curl http://queue/done?pid=<%= $$in{'md5'} %>;
