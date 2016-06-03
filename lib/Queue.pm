@@ -7,11 +7,11 @@ use Mojo::Base 'Mojolicious';
 use Mojolicious::Plugin::Database;
 use Mojolicious::Plugin::Config;
 
-use IO::Handle;
+#use IO::Handle;
 
 use common;
 
-has [qw( db config messages selread pids)];
+has [qw( db config messages pids)];
 
 # This method will run once at server start
 sub startup {

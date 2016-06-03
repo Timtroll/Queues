@@ -1,6 +1,7 @@
 % layout 'default';
 % title 'Welcome 123';
-<h2><%= $msg %></h2>
+<h2><a href="/">home</a></h2>
+<h3><%= $msg %></h3>
 
 	<form action="/addjob" method="post">
 		<input type="text" placeholder="google.com" name="url">
@@ -9,9 +10,9 @@
 
 	<hr>
 % if (keys %{$jobs}) {
-	<li>Running process</li>
+	<h2>Running process</h2>
 %	foreach (sort {$a <=> $b} keys %{$jobs}) {
-	pid = <a href="/status?pid=<%= $_ %>" target="_blank"><%= $_ %></a> (<%= $jobs->{$_}->{command} %>) <a href="/killer?pid=<%= $_ %>">kill</a><br>
+	<li>pid = <a href="/status?pid=<%= $_ %>" target="_blank"><%= $$jobs{$_} %></a> <a href="/killer?pid=<%= $_ %>">kill</a></li>
 %	}
 % } else {
 	<li>Nothing</li>

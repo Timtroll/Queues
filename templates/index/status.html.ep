@@ -2,14 +2,19 @@
 % title 'Test';
 % use Data::Dumper;
 
-% if (keys %$jobs) {
-%	foreach (keys %$jobs) {
-%=		Dumper($$jobs{$_});
-<br>
-%	}
-<hr>
-%=	$line
+% if ($pid) {
+%	if ($$jobs{$pid}) {
+		<li><a href="/">Running</a></li>
+%	} elsif ($$done{$pid}) {
+		<li><a href="/">After run</a></li>
+%	} elsif ($$befor{$pid}) {
+		<li><a href="/">Befor to run</a></li>
+%	} else {
+		<li><a href="/">Not exists</a></li>
+%	}	
+		<hr>
+%==	join("<br>", split("\n", $line));
 % } else {
-	<li>Nothing</li>
+	<li><a href="/">Nothing</a></li>
 % }
 

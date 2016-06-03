@@ -43,15 +43,22 @@ sub job_add {
 }
 
 sub job_status {
-	my ($self, $jobs, $line, %data);
+	my ($self, $pid, $jobs, $line, %data);
 	$self = shift;
 
 	# Get info from running tasks
-	$line = info_job($self->param('pid'));
+	$pid = $self->param('pid');
+	$line = info_job($pid);
 
 	# Render template "index/status.html.ep" with message
 	%data = (
 		jobs	=> $pids, 
+# ???????
+# add queues
+		done	=> $pids, 
+		befor	=> $pids,
+ 
+		pid		=> $pid,
 		line	=> $line
 	);
 	$self->render('index/status', %data);

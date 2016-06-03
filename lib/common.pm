@@ -4,29 +4,23 @@ use strict;
 use warnings;
 
 use Digest::MD5 qw(md5_hex);
-use Socket;
-use IO::Select;
-use IO::Handle;
-use constant DEBUG => 0;
-
 use Data::Dumper;
-use JSON::XS;
 
 use Mojo::Home;
 use Exporter();
-use vars qw( @ISA @EXPORT @EXPORT_OK $config $messages $childs $selread $pids );
+use vars qw( @ISA @EXPORT @EXPORT_OK $config $messages $pids );
 
 use utf8;
 $| = 1;
 
 our @ISA = qw( Exporter );
 our @EXPORT = qw(
-	$config $messages $childs $selread $pids 
-	&done_job &info_job &create_job &kill_job &dbg_print &get_pdf_res &pdf2jpg
+	$config $messages $pids 
+	&done_job &info_job &create_job &kill_job &get_pdf_res &pdf2jpg
 );
 
-our ($config, $messages, $childs, $selread, $pids);
-my (%pids);
+our ($config, $messages, $pids);
+my %pids = ();
 
 BEGIN {
 	# set not verify ssl connection
@@ -35,15 +29,9 @@ BEGIN {
 		#'SSL_VERIFY_NONE'
 	);
 	$ENV{PERL_LWP_SSL_VERIFY_HOSTNAME} = '0';
-
-	$selread = IO::Select->new();
 };
 
 ############ queues ############
-
-# set max num of childs
-$childs = 8;
-%pids = ();
 
 sub done_job {
 	my ($line, $pid);
@@ -51,91 +39,34 @@ sub done_job {
 
 	# Check exists job & output data from them
 	if (exists $pids{$pid}) {
-		# store output
-		$line = `cat $config->{'socket_dir'}/$pid`;
-
+		# store pid for reload application
 # ?????????
-# store output
 
-		# delete job from job storage
+		# delete job from job queue
 		delete $pids{$pid};
+
+		return 1;
 	}
 	else {
-		# store output data recived from job & delete exchange file
-		if (-s "$config->{'socket_dir'}/$pid") {
-			# store output
-			$line = `cat $config->{'socket_dir'}/$pid`;
-
-# ?????????
-# store output
-
-			# delete exchange file
-			unlink("$config->{'socket_dir'}/$pid");
-		}
+		return 0;
 	}
-	$line = undef;
-
-	return 1;
-#	$line = read_line($pid);
 }
 
 sub info_job {
-#	my ($line, $read, $pid, $sel);
-	my ($line, $pid, @tmp);
+	my ($line, $pid);
 	$pid = shift;
 
-	$line = read_line($pid);
-print "$line\n";
-	if ($line) {
-		@tmp = split("\n", $line);
-		$line = pop @tmp;
-		@tmp = ();
+# ?????????? create reading after reloading mode
 
-		return $line;
-	}
-
-	$pids = \%pids;
-	return 0;
-
-=comment
 	if ($pids{$pid}) {
-		# prepare read stored handle
-		$sel = IO::Select->new($pids{$pid}{child_fh}, undef, undef, 0);
+		# read log from current job
+		$line = `cat $pids{$pid}`;
 
-		$line = undef;
-		while ($sel->can_read(5)) {
-			# choose handle & read output
-			my $fh = $pids{$pid}{child_fh};
-			sysread($fh, $line, 64*1024, length($line));
-
-# ??????????????
-# we have to store last reply
-
-			# find last line in the output
-			if (!$line) {
-				$sel->remove($fh);
-				close($fh);
-				$line = undef;
-
-				kill_job($pid);
-			}
-			else {
-				my @tmp = split("\n", $line);
-				$line = pop @tmp;
-				@tmp = ();
-			}
-
-			last if defined($line);
-			chomp $line;
-		}
-
-		$pids = \%pids;
 		return $line;
 	}
-
-	$pids = \%pids;
-	return 0;
-=cut
+	else {
+		return 0;
+	}
 }
 
 sub create_job {
@@ -149,167 +80,72 @@ sub create_job {
 	}
 
 	# add callback request
-#	$job =~ s/(\r|\n)//goi;
 	$job .= "\ncurl http://queue/done?pid=$$in{'md5'};\n";
 
 	# check number of jobs
-	if ($childs <= scalar(keys %{$pids})) {
+	if ($config->{'limit'} <= scalar(keys %{$pids})) {
 		return 0;
 	}
-	else {
-		return $$in{'md5'};
-	}
-print "==$job===";
 
 	# run command in background & write output into file
-#print "$job > $config->{'socket_dir'}/$md5 &";
-#	`$job > $config->{'socket_dir'}/$md5 &`;
+# ???????? create exec check
+	`mkdir $$in{'output'}/$$in{'md5'}`;
 	`echo '$job' > $$in{'output'}/$$in{'md5'}/$$in{'md5'}.sh`;
 	`chmod +x $$in{'output'}/$$in{'md5'}/$$in{'md5'}.sh`;
-	`$$in{'output'}/$$in{'md5'}/$$in{'md5'}.sh > $$in{'output'}/$$in{'md5'}/$$in{'md5'} &`;
+	`$$in{'output'}/$$in{'md5'}/$$in{'md5'}.sh > $$in{'output'}/$$in{'md5'}/$$in{'md5'}.log &`;
 	`chmod -x $$in{'output'}/$$in{'md5'}/$$in{'md5'}.sh`;
-#	`rm $config->{'socket_dir'}/$md5.sh &`;
+# ???????? create exec check
 
-#	if (-e "$config->{'socket_dir'}/$md5") {
+	if (-d "$config->{'socket_dir'}/$$in{'md5'}") {
 		# store name of new job md5 hash into job storage and path for output data
-		$pids{$$in{'md5'}} = "$$in{'output'}/$$in{'md5'}";
+		$pids{$$in{'md5'}} = "$$in{'output'}/$$in{'md5'}/$$in{'md5'}.log";
 
 		# return name of the job
 		$pids = \%pids;
 		return $$in{'md5'};
-#	}
-#	else {
-#		return 0;
-#	}
-
-=comment
-	# create socket for job
-	%pair  = (
-		'child_fh'	=> undef,
-		'parent_fh'	=> undef
-	);
-
-	socketpair($pair{'child_fh'}, $pair{'parent_fh'}, AF_UNIX, SOCK_STREAM, PF_UNSPEC) or die "socketpair: $!";
-
-	$childid = fork;
-	die "cannot fork" if ($childid == -1);
-
-	$pair{'pid'} = $childid;
-	$pair{'command'} = $job;
-
-	# redirect child outout into opened socket
-	unless ($childid) {
-		# child
-		open STDIN, "<&", $pair{'parent_fh'};
-		open STDOUT, ">&", $pair{'parent_fh'};
-		open STDERR, ">&", $pair{'parent_fh'};
-		close $pair{'parent_fh'};
-		close $pair{'child_fh'};
-
-		# close inherited handles
-		foreach ($selread->handles) {
-			$selread->remove($_);
-			close $_;
-		}
-
-		exec("$job $childid");
-	}
-
-	if ($childid) {
-		$pids{$childid} = { %pair };
-	}
-
-	$selread->add($pids{$childid}{'child_fh'});
-	close $pair{'parent_fh'};
-
-	$pids = \%pids;
-	return ($childid);
-=cut
-}
-
-sub kill_job {
-	my ($pid);
-	$pid = shift;
-
-	# close handles for child process
-	close $pids{$pid}{parent_fh} if $pids{$pid}{parent_fh};
-	close $pids{$pid}{child_fh} if $pids{$pid}{child_fh};
-
-	# delete child from list
-	delete $pids{$pid};
-
-	kill 9, $pid;
-	wait;
-
-	$pids = \%pids;
-}
-
-sub read_line {
-	my ($line, $read, $pid, $sel);
-	$pid = shift;
-
-	if ($pids{$pid}) {
-		# prepare read stored handle
-		$sel = IO::Select->new($pids{$pid}{'child_fh'}, undef, undef, 0);
-
-		my $fh = $pids{$pid}{'child_fh'};
-		if ($fh->eof || $fh->error) {
-			# потомок завершил работу
-			$sel->remove($fh);
-			close $fh;
-			next;
-		}
-#		if ($line = <$fh>) {
-## ??????????????
-## we have to store last reply
-#			print $line;
-#		}
-	}
-
-#		$line = '';
-#		while ($sel->can_read()) {
-#			# choose handle & read output
-#			my $fh = $pids{$pid}{'child_fh'};
-#			sysread($fh, $line, 64*1024, length($line));
-#print "=$line";
-## ??????????????
-## we have to store last reply
-#
-#			# find last line in the output
-#			if (!$line) {
-#				$sel->remove($fh);
-#				close($fh);
-##				$line = undef;
-#
-#				kill_job($pid);
-#print "-\n";
-#				last;
-#			}
-#
-##			last if defined($line);
-#print "=\n";
-#			last if $line;
-##			chomp $line;
-#		}
-#	}
-
-	$pids = \%pids;
-	if ($line) {
-#		$pids = \%pids;
-		return $line;
 	}
 	else {
-#		$pids = \%pids;
 		return 0;
 	}
 }
 
-# debug output
-sub dbg_print {
-	my ($msg);
-	$msg = shift;
+sub kill_job {
+	my ($pid, $list, @list, @tmp);
+	$pid = shift;
 
-	print STDERR "$msg\n" if (DEBUG);
+	if ($pids{$pid}) {
+		# find pids of all running jobs for current pid
+		$list = `ps -aux| grep $pid`;
+# ???????? create exec check
+
+		# get list of all running jobs for current pid
+		@list = split("\n", $list);
+
+		# kill all running jobs for current pid
+		foreach (@list) {
+			# find pid
+			s/\s+/ /goi;
+			@tmp = split(" ", $_);
+			$tmp[1] =~ /\D/goi;
+
+			# kill found pid job
+			`kill -9 $tmp[1]`;
+# ???????? create exec check
+			@tmp = ();
+		}
+
+		# write interupt message into job-log
+#????????
+
+		# delete gob from list
+		delete $pids{$pid};
+#		$pids = \%pids;
+
+		return 1;
+	}
+	else {
+		return 0;
+	}
 }
 
 ############ conversions ############
@@ -337,8 +173,11 @@ sub pdf2jpg {
 		$$in{'size_sum'} = '900x900';
 	}
 
-	# check output dir
-# ???????
+	# create output dir
+	$$in{'source_dir'} = $$in{'source'};
+	if ($$in{'source_dir'} =~ /\//) {
+		$$in{'source_dir'} =~ s/\/.*?$//;
+	}
 
 	# set up md5 hash for indentify current job
 	$$in{'md5'} = md5_hex($$in{'source'}.time());
