@@ -139,37 +139,44 @@ print "$line\n";
 }
 
 sub create_job {
-	my ($childid, $hchild, $hparent, $job, $line, $md5, %pair);
+	my ($childid, $hchild, $hparent, $job, $line, $in, %pair);
 	$job = shift;
+	$in = shift;
 
-	# set up md5 hash for indentify current job
-	$md5 = md5_hex($job.time());
+	# check md5 hash
+	unless ($$in{'md5'}) {
+		return 0;
+	}
 
 	# add callback request
 #	$job =~ s/(\r|\n)//goi;
-	$job .= "\ncurl http://queue/done?pid=$md5;\n";
-print "==$job===";
+	$job .= "\ncurl http://queue/done?pid=$$in{'md5'};\n";
+
 	# check number of jobs
-	if ($childs <= scalar(keys %pids)) {
+	if ($childs <= scalar(keys %{$pids})) {
 		return 0;
 	}
+	else {
+		return $$in{'md5'};
+	}
+print "==$job===";
 
 	# run command in background & write output into file
 #print "$job > $config->{'socket_dir'}/$md5 &";
 #	`$job > $config->{'socket_dir'}/$md5 &`;
-	`echo '$job' > $config->{'socket_dir'}/$md5.sh`;
-	`chmod +x $config->{'socket_dir'}/$md5.sh`;
-	`$config->{'socket_dir'}/$md5.sh > $config->{'socket_dir'}/$md5 &`;
-	`chmod -x $config->{'socket_dir'}/$md5.sh`;
+	`echo '$job' > $$in{'output'}/$$in{'md5'}/$$in{'md5'}.sh`;
+	`chmod +x $$in{'output'}/$$in{'md5'}/$$in{'md5'}.sh`;
+	`$$in{'output'}/$$in{'md5'}/$$in{'md5'}.sh > $$in{'output'}/$$in{'md5'}/$$in{'md5'} &`;
+	`chmod -x $$in{'output'}/$$in{'md5'}/$$in{'md5'}.sh`;
 #	`rm $config->{'socket_dir'}/$md5.sh &`;
 
 #	if (-e "$config->{'socket_dir'}/$md5") {
 		# store name of new job md5 hash into job storage and path for output data
-		$pids{$md5} = "$config->{'socket_dir'}/$md5";
+		$pids{$$in{'md5'}} = "$$in{'output'}/$$in{'md5'}";
 
 		# return name of the job
 		$pids = \%pids;
-		return $md5;
+		return $$in{'md5'};
 #	}
 #	else {
 #		return 0;
@@ -321,7 +328,7 @@ sub pdf2jpg {
 	# move ./tmp files into source dir
 	# delete ./tmp dir
 
-	# set up omut image size & resolution
+	# set up out image size & resolution
 	unless ($$in{'resolution'}) { $$in{'resolution'} = 160; }
 	if ($$in{'size'}{'width'} && $$in{'size'}{'height'}) {
 		$$in{'size_sum'} = "$$in{'size'}{'width'}x$$in{'size'}{'height'}";
@@ -330,19 +337,23 @@ sub pdf2jpg {
 		$$in{'size_sum'} = '900x900';
 	}
 
+	# check output dir
+# ???????
+
+	# set up md5 hash for indentify current job
+	$$in{'md5'} = md5_hex($$in{'source'}.time());
+
 	$cmd = $self->render_to_string(	
 		'layouts/pdf2jpg',
 		format	=> 'txt',
 		config	=> $config,
 		in		=> $in
 	);
-#	$cmd =~ s/(\r|\n)//goi;
-#print "$cmd\n";
 
-	$id = create_job($cmd);
+	$id = create_job($cmd, $in);
 print Dumper(\%pids);
 
-	return $id;
+	return $$in{'md5'};
 }
 
 sub get_pdf_res {
