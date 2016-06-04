@@ -1,0 +1,16 @@
+#container {
+	width: 900px; /* Ширина макета */
+	margin: 0 auto; /* Выравнивание по центру */
+}
+#leftcol {
+	width: 300px; /* Ширина левой колонки */
+	float: left;
+	vertical-align: top;
+}
+#rightcol {
+	width: 300px; /* Ширина правой колонки */
+	float: right;
+}
+#centercol {
+	margin: 0 300px 0 300px; /* Отступ на ширину левой и правой колонки*/
+}

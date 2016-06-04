@@ -11,7 +11,7 @@ use Mojolicious::Plugin::Config;
 
 use common;
 
-has [qw( db config messages pids)];
+has [qw( db config messages queue pids done)];
 
 # This method will run once at server start
 sub startup {
@@ -26,6 +26,10 @@ sub startup {
 	$config = $self->plugin('Config');
 
 	$self->sessions->default_expiration(86400);
+
+	# reload queues from storage
+	$self->load_queues();
+# ?????????
 
 	# Session for auth
 	my $sessions = Mojolicious::Sessions->new;

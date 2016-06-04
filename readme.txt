@@ -1,7 +1,17 @@
 Manufactured by Timothy Zhouravlyuov
 
-Description API requests and response.
+Notice:
+- current version optimized to linux Debian
+- all sh-command in templates need run in verbose mode (templates placing in /templates/layout folder)
+- after changing sh-template need to restart application
+- queues saved as three types:
+	- queue for befor running jobs ???????????????
+	- queue for current running jobs (limitation set in queue.conf)
+	- queue for after running jobs ???????????????
+- when read all jobs from storage will be replaced exists keys and values
+- application has API and web interface (web interface could be off in queue.conf) ???????????????
 
+Description API requests and response.
 
 ============================================================================
 Put action requests

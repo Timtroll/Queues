@@ -8,19 +8,24 @@ use Data::Dumper;
 
 use Mojo::Home;
 use Exporter();
-use vars qw( @ISA @EXPORT @EXPORT_OK $config $messages $pids );
+use vars qw( @ISA @EXPORT @EXPORT_OK $config $messages $queue $pids $done );
 
 use utf8;
 $| = 1;
 
 our @ISA = qw( Exporter );
 our @EXPORT = qw(
-	$config $messages $pids 
-	&done_job &info_job &create_job &kill_job &get_pdf_res &pdf2jpg
+	$config $messages $queue $pids $done 
+	&done_job &info_job &create_job &kill_job &get_pdf_res &load_queues &store_queues
 );
 
-our ($config, $messages, $pids);
+my %queue = ();
 my %pids = ();
+my %done = ();
+our ($config, $messages, $queue, $pids, $done);
+$queue = \%queue;
+$pids = \%pids;
+$done = \%done;
 
 BEGIN {
 	# set not verify ssl connection
@@ -33,12 +38,110 @@ BEGIN {
 
 ############ queues ############
 
+sub load_queues {
+	$queue = load_queue('queue');
+	$pids = load_queue('pids');
+	$done = load_queue('done');
+}
+
+sub store_queues {
+	my ($type, $pid);
+	($type, $pid) = @_;
+
+	$queue = store_queue('queue');
+	$pids = store_queue('pids');
+	$done = store_queue('done');
+}
+
+sub load_queue {
+	my ($type, $link, $line, $key, $val, $pid, $status);
+	$type = shift;
+
+	# when read all jobs from storage will be replaced exists keys and values
+	if ($type eq 'queue') { $link = \%queue; }
+	elsif ($type eq 'pids') { $link = \%pids; }
+	elsif ($type eq 'done') { $link = \%done; }
+
+	if (scalar(keys %{$link})) {
+		open (FILE, "<$config->{'storage_dir'}/$type") or $status = 0;
+			 while (chomp($line = <FILE>)) {
+				($key, $val) = split("\t", $line);
+
+				# check key and value
+				if ($key && $val) {
+					unless ($key =~ /\D/) {
+						$$link{$key} = $val;
+					}
+				}
+			} (keys %{$link});
+		close (FILE) or $status = 0;
+
+	}
+
+	return $link;
+}
+
+sub store_queue {
+	my ($type, $link, $line, $cnt, $status);
+	$type = @_;
+
+	$status = 1;
+
+	# check folder for queues
+	unless (-e "$config->{storage_dir}/$type") {
+		$status = 2;
+	}
+	else {
+		# create link to queue which are store (queue pids done)
+		if ($type eq 'queue') { $link = \%queue; }
+		elsif ($type eq 'pids') { $link = \%pids; }
+		elsif ($type eq 'done') { $link = \%done; }
+		else { $status = 3; }
+
+		$cnt = scalar(keys %{$link});
+		if (($status == 1)&&($cnt)) {
+			open (FILE, ">$config->{'storage_dir'}/$type") or $status = 0;
+				map {
+					$line = join("\t", ($_, $$link{$_}));
+					if ($cnt) { $line .= "\n"; }
+					print FILE $line;
+				} (keys %{$link});
+			close (FILE) or $status = 0;
+		}
+	}
+
+	return $status;
+}
+
+sub move_job {
+	my ($from_type, $to_type, $pid) = @_;
+
+	$queue = load_queue('queue');
+	$pids = load_queue('pids');
+	$done = load_queue('done');
+
+
+}
+
+sub del_job {
+	my ($from_type, $to_type, $pid) = @_;
+
+	$queue = load_queue('queue');
+	$pids = load_queue('pids');
+	$done = load_queue('done');
+
+
+}
+
 sub done_job {
 	my ($line, $pid);
 	$pid = shift;
 
 	# Check exists job & output data from them
 	if (exists $pids{$pid}) {
+		# move pid to done hash
+# ?????????
+
 		# store pid for reload application
 # ?????????
 
@@ -70,29 +173,61 @@ sub info_job {
 }
 
 sub create_job {
-	my ($childid, $hchild, $hparent, $job, $line, $in, %pair);
-	$job = shift;
-	$in = shift;
-
-	# check md5 hash
+	my ($self, $childid, $hchild, $hparent, $cmd, $line, $job, $in, %tmp);
+	($self, $job, $in) = @_;
+print "$self, $job, $in\n";
+	# create output dir variable
+	if ($$in{'source'}) {
+		$$in{'source_dir'} = $$in{'source'};
+		if ($$in{'source_dir'} =~ /\//) {
+			$$in{'source_dir'} =~ s/\/.*?$//;
+		}
+	}
+print Dumper($in);
+	# set up md5 hash for indentify current job
+	$$in{'md5'} = create_md5($in);
 	unless ($$in{'md5'}) {
 		return 0;
 	}
 
+	# check exists job and return if exists
+	if (check_job($$in{'md5'})) {
+		return 0;
+	}
+
+	# check GUI or API
+	if (-e "$config->{'home_dir'}/layouts/$job") {
+		$cmd = $self->render_to_string(	
+			"layouts/$job",
+			format	=> 'txt',
+			config	=> $config,
+			in		=> $in
+		);
+	}
+	else {
+		$cmd = $job;
+	}
+
 	# add callback request
-	$job .= "\ncurl http://queue/done?pid=$$in{'md5'};\n";
+	$cmd .= "\ncurl http://queue/done?pid=$$in{'md5'};\n";
 
 	# check number of jobs
 	if ($config->{'limit'} <= scalar(keys %{$pids})) {
-		return 0;
+		# add job into queue which wait to exec
+		$queue{$$in{'md5'}} = { %{$in} };
 	}
 
 	# run command in background & write output into file
 # ???????? create exec check
+print "mkdir $$in{'output'}/$$in{'md5'}\n";
 	`mkdir $$in{'output'}/$$in{'md5'}`;
-	`echo '$job' > $$in{'output'}/$$in{'md5'}/$$in{'md5'}.sh`;
+print "echo '$cmd' > $$in{'output'}/$$in{'md5'}/$$in{'md5'}.sh\n";
+	`echo '$cmd' > $$in{'output'}/$$in{'md5'}/$$in{'md5'}.sh`;
+print "chmod +x $$in{'output'}/$$in{'md5'}/$$in{'md5'}.sh\n";
 	`chmod +x $$in{'output'}/$$in{'md5'}/$$in{'md5'}.sh`;
+print "$$in{'output'}/$$in{'md5'}/$$in{'md5'}.sh > $$in{'output'}/$$in{'md5'}/$$in{'md5'}.log &\n";
 	`$$in{'output'}/$$in{'md5'}/$$in{'md5'}.sh > $$in{'output'}/$$in{'md5'}/$$in{'md5'}.log &`;
+print "chmod -x $$in{'output'}/$$in{'md5'}/$$in{'md5'}.sh\n";
 	`chmod -x $$in{'output'}/$$in{'md5'}/$$in{'md5'}.sh`;
 # ???????? create exec check
 
@@ -107,6 +242,18 @@ sub create_job {
 	else {
 		return 0;
 	}
+}
+
+sub check_job {
+	my $pid = shift;
+
+	if ($pid) {
+		if (exists $queue{$pid}) { return 1; }
+		elsif (exists $pids{$pid}) { return 1; }
+		elsif (exists $done{$pid}) { return 1; }
+	}
+
+	return 0;
 }
 
 sub kill_job {
@@ -148,52 +295,7 @@ sub kill_job {
 	}
 }
 
-############ conversions ############
-
-sub pdf2jpg {
-	my ($self, $in, $config, $cmd, $id);
-	$self = shift;
-	$in = shift;
-	$config = shift;
-
-	# set up command line for making conversion to include it in pipe
-	# create ./tmp dir
-	# split input_name.pdf -> input_name.\d.pdf
-	# delete txt description
-	# convert one by one input.name.\d.pdf files -> input_name.\d.jpg & input_name.\d.swf & resize input_name.\d.jpg -> input_name.\d.jpg including srgb.icm schema
-	# move ./tmp files into source dir
-	# delete ./tmp dir
-
-	# set up out image size & resolution
-	unless ($$in{'resolution'}) { $$in{'resolution'} = 160; }
-	if ($$in{'size'}{'width'} && $$in{'size'}{'height'}) {
-		$$in{'size_sum'} = "$$in{'size'}{'width'}x$$in{'size'}{'height'}";
-	}
-	else {
-		$$in{'size_sum'} = '900x900';
-	}
-
-	# create output dir
-	$$in{'source_dir'} = $$in{'source'};
-	if ($$in{'source_dir'} =~ /\//) {
-		$$in{'source_dir'} =~ s/\/.*?$//;
-	}
-
-	# set up md5 hash for indentify current job
-	$$in{'md5'} = md5_hex($$in{'source'}.time());
-
-	$cmd = $self->render_to_string(	
-		'layouts/pdf2jpg',
-		format	=> 'txt',
-		config	=> $config,
-		in		=> $in
-	);
-
-	$id = create_job($cmd, $in);
-print Dumper(\%pids);
-
-	return $$in{'md5'};
-}
+############ Subs ############
 
 sub get_pdf_res {
 	my ($file, $line, $resp, $config, %out);
@@ -234,6 +336,28 @@ sub get_pdf_res {
 	$out{'paper_type'} = "custom";
 
 	return \%out;
+}
+
+sub create_md5 {
+	my ($in, $md5);
+	$in = shift;
+
+	$md5 = '';
+	map {
+		if (ref($$in{$_}) ne 'HASH') {
+			if ($$in{$_}) {
+				if ($md5) {
+					$md5 .= $$in{$_};
+				}
+				else{
+					$md5 = $$in{$_};
+				}
+			}
+		}
+	} (keys %{$in});
+	$md5 = md5_hex($md5.time());
+
+	return $md5;
 }
 
 1;

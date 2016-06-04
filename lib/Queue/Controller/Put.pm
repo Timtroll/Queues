@@ -54,13 +54,37 @@ print Dumper(\%in);
 		}
 	}
 
+	# set up out image size & resolution
+	unless ($in{'resolution'}) { $in{'resolution'} = 160; }
+	if ($in{'size'}{'width'} && $in{'size'}{'height'}) {
+		$in{'size_sum'} = "$in{'size'}{'width'}x$in{'size'}{'height'}";
+	}
+	else {
+		$in{'size_sum'} = '900x900';
+	}
+
 	# make conversion
 	unless ($error) {
 		if ($in{'conversion_type'} eq 'pdf2jpg') {
-			$queue_id = pdf2jpg($self, \%in, $config);
+			# set up command line for making conversion to include it in pipe
+			# create ./tmp dir
+			# split input_name.pdf -> input_name.\d.pdf
+			# delete txt description
+			# convert one by one input.name.\d.pdf files -> input_name.\d.jpg & input_name.\d.swf & resize input_name.\d.jpg -> input_name.\d.jpg including srgb.icm schema
+			# move ./tmp files into source dir
+			# delete ./tmp dir
+
+			$queue_id = $self->create_job('pdf2jpg', \%in);
+#			$queue_id = pdf2jpg($self, \%in, $config);
 		}
 		elsif ($in{'conversion_type'} eq 'psd2jpg') {
-			$queue_id = psd2jpg(\%in, $config);
+			# set up command line for making conversion to include it in pipe
+			# resize input_name.jpg -> input_name.jpg including srgb.icm schema if exists
+			# move ./tmp files into source dir
+			# delete ./tmp dir
+
+			$queue_id = $self->create_job('psd2jpg', \%in);
+#			$queue_id = psd2png(\%in, $config);
 		}
 		else {
 			$error++;
@@ -69,6 +93,16 @@ print Dumper(\%in);
 				'reason'	=> $config->{messages}->{'not_support_conversion'}.$in{'conversion_type'}
 			};
 		}
+
+		# check created job id
+		unless ($queue_id) {
+			$error++;
+			$out = {
+				'status'	=> 409,
+				'reason'	=> $config->{messages}->{'not_created_job'}
+			};
+		}
+	
 	}
 
 	unless ($error) {

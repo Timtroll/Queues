@@ -1,19 +1,47 @@
 % layout 'default';
 % title 'Welcome 123';
+<link href="/css/main.css" rel="stylesheet" media="all">
+
 <h2><a href="/">home</a></h2>
 <h3><%= $msg %></h3>
 
 	<form action="/addjob" method="post">
-		<input type="text" placeholder="google.com" name="url">
+		<input type="text" placeholder="ping google.com" name="command" value="<% if ($self->param('command')) { %><%= $self->param('command') %><% } %>">
+		<input type="text" placeholder="/home/ouput_dir/" name="output" value="<% if ($self->param('output')) { %><%= $self->param('output') %><% } %>">
 		<button type="submit">Add</button>
 	</form>
 
 	<hr>
-% if (keys %{$jobs}) {
-	<h2>Running process</h2>
-%	foreach (sort {$a <=> $b} keys %{$jobs}) {
-	<li>pid = <a href="/status?pid=<%= $_ %>" target="_blank"><%= $$jobs{$_} %></a> <a href="/killer?pid=<%= $_ %>">kill</a></li>
-%	}
-% } else {
+<div id="container">
+	<div id="leftcol" align="left">
+		<div><b>Unexecuted list</b></div>
+%	if (scalar(keys %{$done})) {
+%		foreach (sort {$a <=> $b} keys %{$done}) {
+		<li>pid = <a href="/status?pid=<%= $_ %>" target="_blank"><%= $$done{$_} %></a> <a href="/killer?pid=<%= $_ %>">kill</a></li>
+%		}
+%	} else {
 	<li>Nothing</li>
 % }
+	</div>
+	<div id="rightcol" align="left">
+		<div><b>Еxecuted list</b></div>
+%	if (scalar(keys %{$done})) {
+%		foreach (sort {$a <=> $b} keys %{$done}) {
+		<li>pid = <a href="/status?pid=<%= $_ %>" target="_blank"><%= $$done{$_} %></a> <a href="/killer?pid=<%= $_ %>">kill</a></li>
+%		}
+%	} else {
+	<li>Nothing</li>
+% }
+	</div>
+	<div id="centercol" align="left">
+		<div><b>Running process</b></div>
+%	if (scalar(keys %{$pids})) {
+%		foreach (sort {$a <=> $b} keys %{$pids}) {
+		<li><a href="/status?pid=<%= $_ %>" target="_blank"><%= substr($_, 0, 30) %></a>&nbsp;&nbsp;<a href="/killer?pid=<%= $_ %>">X</a></li>
+%		}
+%	} else {
+	<li>Nothing</li>
+% }
+	</div>
+</div>
+

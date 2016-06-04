@@ -17,7 +17,7 @@ do
 	<%= $config->{'exec_apps'}->{'gs'} %> -dSAFER -dBATCH -dNOPAUSE -sDEVICE=jpeg -r160 -sOutputFile=<%= $$in{'output'}.'/'.$$in{'md5'} %>/<%= $$in{'md5'} %>.jpg $i;
 
 	echo "----- resize jpg into <%= $$in{'size_sum'} %>";
-	<%= $config->{'exec_apps'}->{'convert'} %> -verbose <%= $$in{'output'}.'/'.$$in{'md5'} %>/<%= $$in{'md5'} %>.jpg -resize <%= $$in{'size_sum'} %> <%= $config->{tmp_dir} %>/resize_<%= $$in{'md5'} %>.jpg;
+	<%= $config->{'exec_apps'}->{'convert'} %> -verbose <% if ($$in{'size_sum'}) { %>-size <%= $$in{'size_sum'} %><% } %> <%= $$in{'output'}.'/'.$$in{'md5'} %>/<%= $$in{'md5'} %>.jpg <%= $config->{tmp_dir} %>/resize_<%= $$in{'md5'} %>.jpg;
 done;
 echo "----- End pdf2jpg";
 

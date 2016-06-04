@@ -14,32 +14,37 @@ sub index {
 	$self = shift;
 
 	%data = (
-		jobs	=> $pids,
-		pid		=> '',
-		msg		=> ''
+		queue	=> $queue,
+		pids	=> $pids,
+		done	=> $done,
+		msg		=> 'Main page'
 	);
 	$self->render('index/index', %data);
 }
 
 sub job_add {
-	my ($self, $line, $job_num, $jobs, $pid, $url, $msg, %data);
+	my ($self, $line, $job_num, $jobs, $pid, $msg, %in, %data);
 	$self = shift;
 
 	# Add tasks to your application
-	$url = $self->param('url');
-
-	$pid = create_job("ping $url");
+	%in = (
+		'command'	=> $self->param('command'),
+		'output'	=> $self->param('output'),
+	);
+print Dumper(\%in);
+	$pid = $self->create_job($in{'command'}, \%in);
 	if ($pid) {
 		$msg = "You ran process pid=$pid";
 	}
 
 	# Render list of jobs template "index/test.html.ep"
 	%data = (
-		jobs	=> $pids,
-		pid		=> $pid,
+		queue	=> $queue,
+		pids	=> $pids,
+		done	=> $done,
 		msg		=> $msg
 	);
-	$self->render('index/test', %data);
+	$self->render('index/index', %data);
 }
 
 sub job_status {
@@ -78,9 +83,10 @@ sub job_kill {
 	}
 
 	%data = (
-		jobs	=> $pids,
-		pid		=> '',
-		msg		=> ''
+		queue	=> $queue,
+		pids	=> $pids,
+		done	=> $done,
+		msg		=> "Killed job pid = $pid"
 	);
 	$self->render('index/index', %data);
 }
