@@ -146,7 +146,7 @@ sub done_job {
 # ?????????
 
 		# delete job from job queue
-		delete $pids{$pid};
+#		delete $pids{$pid};
 
 		return 1;
 	}
@@ -270,13 +270,15 @@ sub kill_job {
 
 		# kill all running jobs for current pid
 		foreach (@list) {
+print "$_\n";
 			# find pid
 			s/\s+/ /goi;
 			@tmp = split(" ", $_);
 			$tmp[1] =~ /\D/goi;
-
+print "$tmp[1]\n";
 			# kill found pid job
 			`kill -9 $tmp[1]`;
+print "kill -9 $tmp[1]\n";
 # ???????? create exec check
 			@tmp = ();
 		}
@@ -285,8 +287,7 @@ sub kill_job {
 #????????
 
 		# delete gob from list
-		delete $pids{$pid};
-#		$pids = \%pids;
+#		delete $pids{$pid};
 
 		return 1;
 	}
