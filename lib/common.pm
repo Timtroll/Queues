@@ -6,26 +6,25 @@ use warnings;
 use Digest::MD5 qw(md5_hex);
 use Data::Dumper;
 
-use Mojo::Home;
+#use Mojo::Home;
 use Exporter();
-use vars qw( @ISA @EXPORT @EXPORT_OK $config $messages $queue $pids $done );
+use vars qw( @ISA @EXPORT @EXPORT_OK $config $messages $queue_l $pids_l $done_l );
 
 use utf8;
 $| = 1;
 
+use libbash;
+
 our @ISA = qw( Exporter );
 our @EXPORT = qw(
-	$config $messages $queue $pids $done 
+	$config $messages $queue_l $pids_l $done_l 
 	&done_job &info_job &create_job &kill_job &get_pdf_res &load_queues &store_queues
 );
 
-my %queue = ();
-my %pids = ();
-my %done = ();
-our ($config, $messages, $queue, $pids, $done);
-$queue = \%queue;
-$pids = \%pids;
-$done = \%done;
+my %queue_h = ();
+my %pids_h = ();
+my %done_h = ();
+our ($config, $messages, $queue_l, $pids_l, $done_l);
 
 BEGIN {
 	# set not verify ssl connection
@@ -34,23 +33,30 @@ BEGIN {
 		#'SSL_VERIFY_NONE'
 	);
 	$ENV{PERL_LWP_SSL_VERIFY_HOSTNAME} = '0';
+
+	$queue_l = \%queue_h;
+	$pids_l = \%pids_h;
+	$done_l = \%done_h;
 };
 
 ############ queues ############
 
-sub load_queues {
-	$queue = load_queue('queue');
-	$pids = load_queue('pids');
-	$done = load_queue('done');
-}
-
 sub store_queues {
-	my ($type, $pid);
+	my ($type, $pid, $status);
 	($type, $pid) = @_;
 
-	$queue = store_queue('queue');
-	$pids = store_queue('pids');
-	$done = store_queue('done');
+	$status = store_queue('queue');
+	if ($status) { return 'queue'; }
+	$status = store_queue('pids');
+	if ($status) { return 'pids'; }
+	$status = store_queue('done');
+	if ($status) { return 'done'; }
+}
+
+sub load_queues {
+	$queue_l = load_queue('queue');
+	$pids_l = load_queue('pids');
+	$done_l = load_queue('done');
 }
 
 sub load_queue {
@@ -58,11 +64,11 @@ sub load_queue {
 	$type = shift;
 
 	# when read all jobs from storage will be replaced exists keys and values
-	if ($type eq 'queue') { $link = \%queue; }
-	elsif ($type eq 'pids') { $link = \%pids; }
-	elsif ($type eq 'done') { $link = \%done; }
+	if ($type eq 'queue') { $link = \%queue_h; }
+	elsif ($type eq 'pids') { $link = \%pids_h; }
+	elsif ($type eq 'done') { $link = \%done_h; }
 
-	if (scalar(keys %{$link})) {
+	if (-e "$config->{'storage_dir'}/$type") {
 		open (FILE, "<$config->{'storage_dir'}/$type") or $status = 0;
 			 while (chomp($line = <FILE>)) {
 				($key, $val) = split("\t", $line);
@@ -93,9 +99,9 @@ sub store_queue {
 	}
 	else {
 		# create link to queue which are store (queue pids done)
-		if ($type eq 'queue') { $link = \%queue; }
-		elsif ($type eq 'pids') { $link = \%pids; }
-		elsif ($type eq 'done') { $link = \%done; }
+		if ($type eq 'queue') { $link = \%queue_h; }
+		elsif ($type eq 'pids') { $link = \%pids_h; }
+		elsif ($type eq 'done') { $link = \%done_h; }
 		else { $status = 3; }
 
 		$cnt = scalar(keys %{$link});
@@ -116,37 +122,58 @@ sub store_queue {
 sub move_job {
 	my ($from_type, $to_type, $pid) = @_;
 
-	$queue = load_queue('queue');
-	$pids = load_queue('pids');
-	$done = load_queue('done');
+#	$queue_l = load_queue('queue');
+#	$pids_l = load_queue('pids');
+#	$done_l = load_queue('done');
 
+print Dumper(\%queue_h);
+print "\n";
+print Dumper(\%pids_h);
+print "\n";
+print Dumper(\%done_h);
+print "\n";
+	if ($from_type eq 'queue') {
+		if (exists $queue_h{$pid}) {
+			$pids_h{$pid} = $queue_h{$pid};
+			delete $queue_h{$pid};
+		}
+		else { return 0; }
+	}
+	elsif ($from_type eq 'pids') {
+		if (exists $pids_h{$pid}) {
+			$done_h{$pid} = $pids_h{$pid};
+			delete $pids_h{$pid};
+		}
+		else { return 0; }
+	}
+	elsif ($from_type eq 'done') {
+		if (exists $done_h{$pid}) { delete $done_h{$pid}; }
+		else { return 0; }
+	}
+	else { return 0; }
+print Dumper(\%queue_h);
+print "\n";
+print Dumper(\%pids_h);
+print "\n";
+print Dumper(\%done_h);
+print "\n";
 
-}
-
-sub del_job {
-	my ($from_type, $to_type, $pid) = @_;
-
-	$queue = load_queue('queue');
-	$pids = load_queue('pids');
-	$done = load_queue('done');
-
-
+	return 1;
 }
 
 sub done_job {
-	my ($line, $pid);
+	my ($line, $pid, $status);
 	$pid = shift;
 
 	# Check exists job & output data from them
-	if (exists $pids{$pid}) {
+	if (exists $pids_h{$pid}) {
 		# move pid to done hash
-# ?????????
+		$status = move_job('pids', 'done', $pid);
+		unless ($status) { return 0; }
 
-		# store pid for reload application
-# ?????????
-
-		# delete job from job queue
-#		delete $pids{$pid};
+		# store queues
+		$status = store_queues();
+		if ($status) { return $status; }
 
 		return 1;
 	}
@@ -156,43 +183,53 @@ sub done_job {
 }
 
 sub info_job {
-	my ($line, $pid);
+	my ($line, $pid, $status);
 	$pid = shift;
 
-# ?????????? create reading after reloading mode
+	# Read list of job after reloading mode
+	$status = load_queues();
+	unless ($status) { return '', 0; }
 
-	if ($pids{$pid}) {
+	if (exists $pids_h{$pid}) {
 		# read log from current job
-		$line = `cat $pids{$pid}`;
+		if (-e $pids_h{$pid}) {
+			$line = cat($pids_h{$pid});
+#			$line = `cat $pids_h{$pid}`;
+		}
+		else { return '', 0; }
 
-		return $line;
+		return $line, 1;
+	}
+	elsif (-e "$config->{'socket_dir'}/$pid/$pid.log") {
+			$line = cat("$config->{'socket_dir'}/$pid/$pid.log");
+#			$line = `cat $config->{'socket_dir'}/$pid/$pid.log`;
+
+		return $line, 1;
 	}
 	else {
-		return 0;
+		return '', 0;
 	}
 }
 
 sub create_job {
-	my ($self, $childid, $hchild, $hparent, $cmd, $line, $job, $in, %tmp);
-	($self, $job, $in) = @_;
-print "$self, $job, $in\n";
-	# create output dir variable
-	if ($$in{'source'}) {
-		$$in{'source_dir'} = $$in{'source'};
-		if ($$in{'source_dir'} =~ /\//) {
-			$$in{'source_dir'} =~ s/\/.*?$//;
-		}
+	my ($self, $childid, $hchild, $hparent, $cmd, $line, $job, $status, $error, %in);
+	($self, $job) = @_;
+
+	# set soure dir variable
+	unless ($in{'source'}) {
+		$in{'source'} = $config->{'socket_dir'};
 	}
-print Dumper($in);
+
 	# set up md5 hash for indentify current job
-	$$in{'md5'} = create_md5($in);
-	unless ($$in{'md5'}) {
-		return 0;
+	$in{'md5'} = create_md5(\%in);
+	unless ($in{'md5'}) {
+		return 0, '';
 	}
 
 	# check exists job and return if exists
-	if (check_job($$in{'md5'})) {
-		return 0;
+	($status, $error) = check_job($in{'md5'});
+	if ($status) {
+		return 0, $error;
 	}
 
 	# check GUI or API
@@ -201,7 +238,7 @@ print Dumper($in);
 			"layouts/$job",
 			format	=> 'txt',
 			config	=> $config,
-			in		=> $in
+			in		=> \%in
 		);
 	}
 	else {
@@ -209,38 +246,34 @@ print Dumper($in);
 	}
 
 	# add callback request
-	$cmd .= "\ncurl http://queue/done?pid=$$in{'md5'};\n";
+	$cmd .= ";\ncurl http://queue/done?pid=$in{'md5'};\n";
 
 	# check number of jobs
-	if ($config->{'limit'} <= scalar(keys %{$pids})) {
+	my $dir = "$config->{'socket_dir'}/$in{'md5'}";
+	if ($config->{'limit'} <= scalar(keys %{$pids_l})) {
 		# add job into queue which wait to exec
-		$queue{$$in{'md5'}} = { %{$in} };
+		$queue_h{$in{'md5'}} = "$dir/$in{'md5'}.log";
 	}
 
 	# run command in background & write output into file
-# ???????? create exec check
-print "mkdir $$in{'output'}/$$in{'md5'}\n";
-	`mkdir $$in{'output'}/$$in{'md5'}`;
-print "echo '$cmd' > $$in{'output'}/$$in{'md5'}/$$in{'md5'}.sh\n";
-	`echo '$cmd' > $$in{'output'}/$$in{'md5'}/$$in{'md5'}.sh`;
-print "chmod +x $$in{'output'}/$$in{'md5'}/$$in{'md5'}.sh\n";
-	`chmod +x $$in{'output'}/$$in{'md5'}/$$in{'md5'}.sh`;
-print "$$in{'output'}/$$in{'md5'}/$$in{'md5'}.sh > $$in{'output'}/$$in{'md5'}/$$in{'md5'}.log &\n";
-	`$$in{'output'}/$$in{'md5'}/$$in{'md5'}.sh > $$in{'output'}/$$in{'md5'}/$$in{'md5'}.log &`;
-print "chmod -x $$in{'output'}/$$in{'md5'}/$$in{'md5'}.sh\n";
-	`chmod -x $$in{'output'}/$$in{'md5'}/$$in{'md5'}.sh`;
+	makedir($dir);
+	echo_command($cmd, "$dir/$in{'md5'}.sh");
+	chmod_plus("$dir/$in{'md5'}.sh");
+	run_background("$dir/$in{'md5'}.sh", "$dir/$in{'md5'}.log");
+	chmod_minus("$dir/$in{'md5'}.sh");
 # ???????? create exec check
 
-	if (-d "$config->{'socket_dir'}/$$in{'md5'}") {
+	if (-d "$dir") {
 		# store name of new job md5 hash into job storage and path for output data
-		$pids{$$in{'md5'}} = "$$in{'output'}/$$in{'md5'}/$$in{'md5'}.log";
+		$pids_h{$in{'md5'}} = "$dir/$in{'md5'}.log";
+
+		# reload list of jobs
 
 		# return name of the job
-		$pids = \%pids;
-		return $$in{'md5'};
+		return $in{'md5'}, '';
 	}
 	else {
-		return 0;
+		return 0, '';
 	}
 }
 
@@ -248,46 +281,53 @@ sub check_job {
 	my $pid = shift;
 
 	if ($pid) {
-		if (exists $queue{$pid}) { return 1; }
-		elsif (exists $pids{$pid}) { return 1; }
-		elsif (exists $done{$pid}) { return 1; }
+		if (exists $queue_h{$pid}) { return 1, $config->{'messages'}->{'exists_job'}; }
+		elsif (exists $pids_h{$pid}) { return 1, $config->{'messages'}->{'exists_job'}; }
+		elsif (exists $done_h{$pid}) { return 1, $config->{'messages'}->{'exists_job'}; }
+	}
+	else {
+		return 1, $config->{'messages'}->{'has_not_pid'};
 	}
 
-	return 0;
+	return 0, '';
 }
 
 sub kill_job {
 	my ($pid, $list, @list, @tmp);
 	$pid = shift;
 
-	if ($pids{$pid}) {
+	if ($pids_h{$pid}) {
 		# find pids of all running jobs for current pid
-		$list = `ps -aux| grep $pid`;
-# ???????? create exec check
+		ps_jobs($pid);
+#		$list = `ps -aux| grep $pid`;
 
 		# get list of all running jobs for current pid
 		@list = split("\n", $list);
 
 		# kill all running jobs for current pid
-		foreach (@list) {
-print "$_\n";
+		map {
 			# find pid
+			@tmp = ();
 			s/\s+/ /goi;
 			@tmp = split(" ", $_);
 			$tmp[1] =~ /\D/goi;
-print "$tmp[1]\n";
+
 			# kill found pid job
-			`kill -9 $tmp[1]`;
-print "kill -9 $tmp[1]\n";
-# ???????? create exec check
-			@tmp = ();
-		}
+			kill_jobs($tmp[1]);
+#			`pkill -TERM -P $tmp[1]`;
+		}  (@list);
 
 		# write interupt message into job-log
-#????????
+# ????? create list of killed jobs
 
-		# delete gob from list
-#		delete $pids{$pid};
+		# store list of running job
+# ????????
+
+		# delete gob from queue list
+# ????? create list of killed jobs
+		delete $queue_h{$pid} if exists $queue_h{$pid};
+		delete $pids_h{$pid} if exists $pids_h{$pid};
+		delete $done_h{$pid} if exists $done_h{$pid};
 
 		return 1;
 	}
@@ -303,7 +343,8 @@ sub get_pdf_res {
 	$file = shift;
 	$config = shift;
 
-	$resp = `pdfinfo -f 1 -l -1 $file 2>&1`;
+	pdf_info($file);
+#	$resp = `pdfinfo -f 1 -l -1 $file 2>&1`;
 
 	$out{'error'} = 0;
 	if ($resp =~ /Incorrect password/) {

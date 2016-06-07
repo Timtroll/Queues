@@ -11,7 +11,7 @@ use Mojolicious::Plugin::Config;
 
 use common;
 
-has [qw( db config messages queue pids done)];
+has [qw( db config messages queue_l pids_l done_l)];
 
 # This method will run once at server start
 sub startup {

@@ -1,5 +1,9 @@
 <!DOCTYPE html>
 <html>
-  <head><title><%= title %></title></head>
-  <body><%= content %></body>
+	<head>
+		<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+		<link href="/css/main.css" rel="stylesheet" media="all">
+		<title><%= title %></title>
+	</head>
+	<body><%= content %></body>
 </html>

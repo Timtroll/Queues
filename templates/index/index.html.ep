@@ -1,13 +1,13 @@
-% layout 'default';
-% title 'Welcome 123';
-<link href="/css/main.css" rel="stylesheet" media="all">
+% layout 'default', title => $title;
 
-<h2><a href="/">home</a></h2>
-<h3><%= $msg %></h3>
+<h2><a href="/"><%= $title %></a></h2>
+% if ($msg) {
+<span style="color:red;"><%= $msg %></span><br>
+% }
 
 	<form action="/addjob" method="post">
 		<input type="text" placeholder="ping google.com" name="command" value="<% if ($self->param('command')) { %><%= $self->param('command') %><% } %>">
-		<input type="text" placeholder="/home/ouput_dir/" name="output" value="<% if ($self->param('output')) { %><%= $self->param('output') %><% } %>">
+		<!--input type="text" placeholder="/home/ouput_dir/" name="output" value="<% if ($self->param('output')) { %><%= $self->param('output') %><% } %>"-->
 		<button type="submit">Add</button>
 	</form>
 
@@ -15,9 +15,9 @@
 <div id="container">
 	<div id="leftcol" align="left">
 		<div><b>Unexecuted list</b></div>
-%	if (scalar(keys %{$done})) {
-%		foreach (sort {$a cmp $b} keys %{$done}) {
-		<li>pid = <a href="/status?pid=<%= $_ %>" target="_blank"><%= $$done{$_} %></a> <a href="/killer?pid=<%= $_ %>">kill</a></li>
+%	if (scalar(keys %{$queue})) {
+%		foreach (sort {$a cmp $b} keys %{$queue}) {
+		<li><a href="/status?pid=<%= $_ %>" target="_blank"><%= substr($_, 0, 30) %></a> <a href="/killer?pid=<%= $_ %>">kill</a></li>
 %		}
 %	} else {
 	<li>Nothing</li>
@@ -27,7 +27,7 @@
 		<div><b>Еxecuted list</b></div>
 %	if (scalar(keys %{$done})) {
 %		foreach (sort {$a cmp $b} keys %{$done}) {
-		<li>pid = <a href="/status?pid=<%= $_ %>" target="_blank"><%= $$done{$_} %></a> <a href="/killer?pid=<%= $_ %>">kill</a></li>
+		<li><a href="/status?pid=<%= $_ %>" target="_blank"><%= substr($_, 0, 30) %></a> <a href="/killer?pid=<%= $_ %>">kill</a></li>
 %		}
 %	} else {
 	<li>Nothing</li>

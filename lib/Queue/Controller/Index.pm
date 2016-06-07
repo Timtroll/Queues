@@ -10,82 +10,101 @@ use common;
 use Data::Dumper;
 
 sub index {
-	my ($self, $jobs, %data);
+	my ($self, %data);
 	$self = shift;
 
+print Dumper($queue_l);
+print Dumper($pids_l);
+print Dumper($done_l);
+
 	%data = (
-		queue	=> $queue,
-		pids	=> $pids,
-		done	=> $done,
-		msg		=> 'Main page'
+		queue	=> $queue_l,
+		pids	=> $pids_l,
+		done	=> $done_l,,
+		title	=> 'Main page',
+		msg		=> ' '
 	);
 	$self->render('index/index', %data);
 }
 
 sub job_add {
-	my ($self, $line, $job_num, $jobs, $pid, $msg, %in, %data);
+	my ($self, $line, $job_num, $pid, $msg, $error, %data);
 	$self = shift;
 
 	# Add tasks to your application
-	%in = (
-		'command'	=> $self->param('command'),
-		'output'	=> $self->param('output'),
-	);
-print Dumper(\%in);
-	$pid = $self->create_job($in{'command'}, \%in);
+	($pid, $error) = $self->create_job($self->param('command'));
+
+	$msg = ' ';
 	if ($pid) {
-		$msg = "You ran process pid=$pid";
+		$msg = $config->{'nessages'}->{'ran_success'} . $pid;
+	}
+	else {
+		$msg = $error;
 	}
 
 	# Render list of jobs template "index/test.html.ep"
 	%data = (
-		queue	=> $queue,
-		pids	=> $pids,
-		done	=> $done,
+		queue	=> $queue_l,
+		pids	=> $pids_l,
+		done	=> $done_l,
+		title	=> 'Queues page',
 		msg		=> $msg
 	);
 	$self->render('index/index', %data);
 }
 
 sub job_status {
-	my ($self, $pid, $jobs, $line, %data);
+	my ($self, $pid, $line, $status, $msg, %data);
 	$self = shift;
+
+print Dumper($queue_l);
+print Dumper($pids_l);
+print Dumper($done_l);
 
 	# Get info from running tasks
 	$pid = $self->param('pid');
-	$line = info_job($pid);
+	($line, $status) = info_job($pid);
+	$msg = ' ';
+	unless ($status) {
+		$msg = $config->{'messages'}->{'not_exists_job'};
+	}
 
 	# Render template "index/status.html.ep" with message
 	%data = (
-		jobs	=> $pids, 
-# ???????
-# add queues
-		done	=> $pids, 
-		befor	=> $pids,
+		queue	=> $queue_l, 
+		pids	=> $pids_l, 
+		done	=> $done_l,
  
+		title	=> "Information about pid=$pid",
 		pid		=> $pid,
-		line	=> $line
+		line	=> $line,
+		msg		=> $msg
 	);
 	$self->render('index/status', %data);
 }
 
 sub job_kill {
-	my ($self, $pid, $jobs, %data);
+	my ($self, $pid, %data);
 	$self = shift;
+
+print Dumper($queue_l);
+print Dumper($pids_l);
+print Dumper($done_l);
 
 	# kill exists process
 	$pid = $self->param('pid');
 	if ($pid) {
-		if ($$pids{$pid}) {
+		if (exists $$pids_l{$pid}) {
 			# kill process
 			kill_job($pid);
 		}
 	}
 
 	%data = (
-		queue	=> $queue,
-		pids	=> $pids,
-		done	=> $done,
+		queue	=> $queue_l,
+		pids	=> $pids_l,
+		done	=> $done_l,
+		title	=> "Killed job",
 		msg		=> "Killed job pid = $pid"
 	);
 	$self->render('index/index', %data);
@@ -97,9 +116,14 @@ sub job_done {
 
 	# get all messages & remove process 
 	$pid = $self->param('pid');
-print ">>>>> $pid $$pids{$pid} <<<<<<<";
+print ">>>>> $pid  <<<<<<<\nqueue = $$queue_l{$pid}\npids = $$pids_l{$pid}\ndone = $$done_l{$pid}\n";
+print Dumper($queue_l);
+print Dumper($pids_l);
+print Dumper($done_l);
+
+
 	if ($pid) {
-		if ($$pids{$pid}) {
+		if ($$pids_l{$pid}) {
 			# get all messages & remove process 
 			$status = done_job($pid);
 
@@ -131,6 +155,8 @@ print ">>>>> $pid $$pids{$pid} <<<<<<<";
 			msg		=> $config->{'messages'}->{'not_exists_job_id'}
 		};
 	}
+
+	unless ($out->{'msg'}) { $out->{'msg'} = ' '; }
 
 	$self->render(json => $out );
 }

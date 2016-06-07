@@ -2,6 +2,7 @@ Manufactured by Timothy Zhouravlyuov
 
 Notice:
 - current version optimized to linux Debian
+- ability to scale an unlimited amount of processing nodes.
 - all sh-command in templates need run in verbose mode (templates placing in /templates/layout folder)
 - after changing sh-template need to restart application
 - queues saved as three types:

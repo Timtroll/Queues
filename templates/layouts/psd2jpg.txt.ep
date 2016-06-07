@@ -2,5 +2,5 @@
 
 echo "----- Start psd2jpg";
 echo "----- convert and resize jpg into <%= $$in{'size_sum'} %>";
-<%= $config->{'exec_apps'}->{'convert'} %> -verbose <% if ($$in{'size_sum'}) { %>-size <%= $$in{'size_sum'} %><% } %> <%= $$in{'source'} %> -flatten <%= $$in{'output'}.'/'.$$in{'md5'} %>/<%= $$in{'md5'} %>.jpg;
+<%= $config->{'exec_apps'}->{'convert'} %> -verbose <% if ($$in{'size_sum'}) { %>-size <%= $$in{'size_sum'} %><% } %> <%= $$in{'source'} %> -flatten <%= $config->{'socket_dir'}.'/'.$$in{'md5'} %>/<%= $$in{'md5'} %>.jpg;
 

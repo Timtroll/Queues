@@ -1,20 +1,28 @@
-% layout 'default';
-% title 'Test';
+% layout 'default', title => $title;
+
 % use Data::Dumper;
 
+
+<h2><a href="/">Home</a></h2>
+% if ($msg) {
+	<span style="color:red;"><%= $msg %></span><br>
+% }
+
+
 % if ($pid) {
-%	if ($$jobs{$pid}) {
-		<li><a href="/">Running</a></li>
+%	if ($$queue{$pid}) {
+	<li>Queue to run</li>
+%	} elsif ($$pids{$pid}) {
+	<li>Running</li>
 %	} elsif ($$done{$pid}) {
-		<li><a href="/">After run</a></li>
-%	} elsif ($$befor{$pid}) {
-		<li><a href="/">Befor to run</a></li>
-%	} else {
-		<li><a href="/">Not exists</a></li>
-%	}	
-		<hr>
+	<li>Completed</li>
+%	}
+% }
+
+% if ($line) {
+	<hr>
 %==	join("<br>", split("\n", $line));
 % } else {
-	<li><a href="/">Nothing</a></li>
+	<li>Nothing</li>
 % }
 
