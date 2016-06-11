@@ -28,11 +28,24 @@ print Dumper($done_l);
 }
 
 sub job_add {
-	my ($self, $line, $job_num, $pid, $msg, $error, %data);
+	my ($self, $line, $job_num, $pid, $msg, $error, %data, %in);
 	$self = shift;
 
 	# Add tasks to your application
-	($pid, $error) = $self->create_job($self->param('command'));
+	%in = (
+		'action'			=> 'put',
+		'conversion_type'	=> $self->param('conversion_type'),
+		'source'			=> './test.pdf',
+		'output'			=> '/home/ouput_dir/',
+		'quality'			=> 100,
+		'resolution'		=> 72,
+		'password'			=> 'textpass',
+		'size'	=>	{
+			'width'		=> 2000,
+			'height'	=> 2000
+		}
+	);
+	($pid, $error) = $self->create_job($in{'conversion_type'}, \%in);
 
 	$msg = ' ';
 	if ($pid) {

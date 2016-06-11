@@ -126,12 +126,6 @@ sub move_job {
 #	$pids_l = load_queue('pids');
 #	$done_l = load_queue('done');
 
-print Dumper(\%queue_h);
-print "\n";
-print Dumper(\%pids_h);
-print "\n";
-print Dumper(\%done_h);
-print "\n";
 	if ($from_type eq 'queue') {
 		if (exists $queue_h{$pid}) {
 			$pids_h{$pid} = $queue_h{$pid};
@@ -151,12 +145,6 @@ print "\n";
 		else { return 0; }
 	}
 	else { return 0; }
-print Dumper(\%queue_h);
-print "\n";
-print Dumper(\%pids_h);
-print "\n";
-print Dumper(\%done_h);
-print "\n";
 
 	return 1;
 }
@@ -193,16 +181,14 @@ sub info_job {
 	if (exists $pids_h{$pid}) {
 		# read log from current job
 		if (-e $pids_h{$pid}) {
-			$line = cat($pids_h{$pid});
-#			$line = `cat $pids_h{$pid}`;
+			$line = `cat $pids_h{$pid}`;
 		}
 		else { return '', 0; }
 
 		return $line, 1;
 	}
-	elsif (-e "$config->{'socket_dir'}/$pid/$pid.log") {
-			$line = cat("$config->{'socket_dir'}/$pid/$pid.log");
-#			$line = `cat $config->{'socket_dir'}/$pid/$pid.log`;
+	elsif (-e "$config->{'output_dir'}/$pid/$pid.log") {
+			$line = `cat $config->{'output_dir'}/$pid/$pid.log`;
 
 		return $line, 1;
 	}
@@ -212,22 +198,22 @@ sub info_job {
 }
 
 sub create_job {
-	my ($self, $childid, $hchild, $hparent, $cmd, $line, $job, $status, $error, %in);
-	($self, $job) = @_;
+	my ($self, $childid, $hchild, $hparent, $cmd, $line, $job, $status, $error, $in);
+	($self, $job, $in) = @_;
 
 	# set soure dir variable
-	unless ($in{'source'}) {
-		$in{'source'} = $config->{'socket_dir'};
+	unless ($$in{'source'}) {
+		$$in{'source'} = $config->{'output_dir'};
 	}
 
 	# set up md5 hash for indentify current job
-	$in{'md5'} = create_md5(\%in);
-	unless ($in{'md5'}) {
+	$$in{'md5'} = create_md5(\%in);
+	unless ($$in{'md5'}) {
 		return 0, '';
 	}
 
 	# check exists job and return if exists
-	($status, $error) = check_job($in{'md5'});
+	($status, $error) = check_job($$in{'md5'});
 	if ($status) {
 		return 0, $error;
 	}
@@ -246,31 +232,31 @@ sub create_job {
 	}
 
 	# add callback request
-	$cmd .= ";\ncurl http://queue/done?pid=$in{'md5'};\n";
+	$cmd .= ";\ncurl http://queue/done?pid=$$in{'md5'};\n";
 
 	# check number of jobs
-	my $dir = "$config->{'socket_dir'}/$in{'md5'}";
+	my $dir = "$config->{'output_dir'}/$$in{'md5'}";
 	if ($config->{'limit'} <= scalar(keys %{$pids_l})) {
 		# add job into queue which wait to exec
-		$queue_h{$in{'md5'}} = "$dir/$in{'md5'}.log";
+		$queue_h{$$in{'md5'}} = "$dir/$$in{'md5'}.log";
 	}
 
 	# run command in background & write output into file
 	makedir($dir);
-	echo_command($cmd, "$dir/$in{'md5'}.sh");
-	chmod_plus("$dir/$in{'md5'}.sh");
-	run_background("$dir/$in{'md5'}.sh", "$dir/$in{'md5'}.log");
-	chmod_minus("$dir/$in{'md5'}.sh");
+	echo_command($cmd, "$dir/$$in{'md5'}.sh");
+	chmod_plus("$dir/$$in{'md5'}.sh");
+	run_background("$dir/$$in{'md5'}.sh", "$dir/$$in{'md5'}.log");
+	chmod_minus("$dir/$$in{'md5'}.sh");
 # ???????? create exec check
 
 	if (-d "$dir") {
 		# store name of new job md5 hash into job storage and path for output data
-		$pids_h{$in{'md5'}} = "$dir/$in{'md5'}.log";
+		$pids_h{$$in{'md5'}} = "$dir/$$in{'md5'}.log";
 
 		# reload list of jobs
 
 		# return name of the job
-		return $in{'md5'}, '';
+		return $$in{'md5'}, '';
 	}
 	else {
 		return 0, '';
@@ -278,15 +264,18 @@ sub create_job {
 }
 
 sub check_job {
-	my $pid = shift;
+	my ($pid, $status);
+	$pid = shift;
 
+	$status = 0;
 	if ($pid) {
-		if (exists $queue_h{$pid}) { return 1, $config->{'messages'}->{'exists_job'}; }
-		elsif (exists $pids_h{$pid}) { return 1, $config->{'messages'}->{'exists_job'}; }
-		elsif (exists $done_h{$pid}) { return 1, $config->{'messages'}->{'exists_job'}; }
+		if (exists $queue_h{$pid}) { $status = 1; }
+		if (exists $pids_h{$pid}) { $status = 1; }
+		if (exists $done_h{$pid}) { $status = 1; }
+		if ($status) { return 1, $config->{'messages'}->{'exists_job'}; }
 	}
 	else {
-		return 1, $config->{'messages'}->{'has_not_pid'};
+		return $status, $config->{'messages'}->{'has_not_pid'};
 	}
 
 	return 0, '';
@@ -299,7 +288,6 @@ sub kill_job {
 	if ($pids_h{$pid}) {
 		# find pids of all running jobs for current pid
 		ps_jobs($pid);
-#		$list = `ps -aux| grep $pid`;
 
 		# get list of all running jobs for current pid
 		@list = split("\n", $list);
@@ -314,7 +302,7 @@ sub kill_job {
 
 			# kill found pid job
 			kill_jobs($tmp[1]);
-#			`pkill -TERM -P $tmp[1]`;
+			`pkill -TERM -P $tmp[1]`;
 		}  (@list);
 
 		# write interupt message into job-log
@@ -337,6 +325,28 @@ sub kill_job {
 }
 
 ############ Subs ############
+
+sub create_md5 {
+	my ($in, $md5);
+	$in = shift;
+
+	$md5 = '';
+	map {
+		if (ref($$in{$_}) ne 'HASH') {
+			if ($$in{$_}) {
+				if ($md5) {
+					$md5 .= $$in{$_};
+				}
+				else{
+					$md5 = $$in{$_};
+				}
+			}
+		}
+	} (keys %{$in});
+	$md5 = md5_hex($md5.time());
+
+	return $md5;
+}
 
 sub get_pdf_res {
 	my ($file, $line, $resp, $config, %out);
@@ -378,28 +388,6 @@ sub get_pdf_res {
 	$out{'paper_type'} = "custom";
 
 	return \%out;
-}
-
-sub create_md5 {
-	my ($in, $md5);
-	$in = shift;
-
-	$md5 = '';
-	map {
-		if (ref($$in{$_}) ne 'HASH') {
-			if ($$in{$_}) {
-				if ($md5) {
-					$md5 .= $$in{$_};
-				}
-				else{
-					$md5 = $$in{$_};
-				}
-			}
-		}
-	} (keys %{$in});
-	$md5 = md5_hex($md5.time());
-
-	return $md5;
 }
 
 1;

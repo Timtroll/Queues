@@ -37,7 +37,7 @@ answer
 
 {
 	status:		201,								(status according http standard - 201 created pipe)
-	queue_id:	4639,								(internal mojolicious queue id for reading messages from opened pipe)
+	queue_id:	4639,								(internal linux queue id for reading messages from opened pipe)
 	start_time:	1456212884							(time of starting conversion in UNIX format)
 }
 

@@ -27,9 +27,8 @@ sub startup {
 
 	$self->sessions->default_expiration(86400);
 
-	# reload queues from storage
+	# load queues from storage if first start or restart application
 	$self->load_queues();
-# ?????????
 
 	# Session for auth
 	my $sessions = Mojolicious::Sessions->new;

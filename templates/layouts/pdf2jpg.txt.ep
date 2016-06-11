@@ -2,22 +2,22 @@
 
 echo "----- Start pdf2jpg";
 echo "----- split pdf";
-<%= $config->{'exec_apps'}->{'pdftk'} %> <%= $$in{'source'} %> burst output <%= $config->{'socket_dir'}.'/'.$$in{'md5'} %>/<%= $$in{'md5'} %>.%04d.pdf verbose;
+<%= $config->{'exec_apps'}->{'pdftk'} %> <%= $$in{'source'} %> burst output <%= $config->{'output_dir'}.'/'.$$in{'md5'} %>/<%= $$in{'md5'} %>.%04d.pdf verbose;
 
 echo "----- remove doc_data.txt";
-rm -v <%= $config->{'socket_dir'}.'/'.$$in{'md5'} %>/doc_data.txt;
+rm -v <%= $config->{'output_dir'}.'/'.$$in{'md5'} %>/doc_data.txt;
 
 echo "----- start for";
-for i in `ls <%= $config->{'socket_dir'}.'/'.$$in{'md5'} %>/*[0-9].pdf`;
+for i in `ls <%= $config->{'output_dir'}.'/'.$$in{'md5'} %>/*[0-9].pdf`;
 do
 	echo "----- convert pdf->swf";
-	<%= $config->{'exec_apps'}->{'pdf2swf'} %> -T 9 -w $i -O1 $i -o <%= $config->{'socket_dir'}.'/'.$$in{'md5'} %>/<%= $$in{'md5'} %>.swf;
+	<%= $config->{'exec_apps'}->{'pdf2swf'} %> -T 9 -w $i -O1 $i -o <%= $config->{'output_dir'}.'/'.$$in{'md5'} %>/<%= $$in{'md5'} %>.swf;
 
 	echo "----- convert pdf->jpg";
-	<%= $config->{'exec_apps'}->{'gs'} %> -dSAFER -dBATCH -dNOPAUSE -sDEVICE=jpeg -r160 -sOutputFile=<%= $config->{'socket_dir'}.'/'.$$in{'md5'} %>/<%= $$in{'md5'} %>.jpg $i;
+	<%= $config->{'exec_apps'}->{'gs'} %> -dSAFER -dBATCH -dNOPAUSE -sDEVICE=jpeg -r160 -sOutputFile=<%= $config->{'output_dir'}.'/'.$$in{'md5'} %>/<%= $$in{'md5'} %>.jpg $i;
 
 	echo "----- resize jpg into <%= $$in{'size_sum'} %>";
-	<%= $config->{'exec_apps'}->{'convert'} %> -verbose <% if ($$in{'size_sum'}) { %>-size <%= $$in{'size_sum'} %><% } %> <%= $config->{'socket_dir'}.'/'.$$in{'md5'} %>/<%= $$in{'md5'} %>.jpg <%= $config->{'tmp_dir'} %>/resize_<%= $$in{'md5'} %>.jpg;
+	<%= $config->{'exec_apps'}->{'convert'} %> -verbose <% if ($$in{'size_sum'}) { %>-size <%= $$in{'size_sum'} %><% } %> <%= $config->{'output_dir'}.'/'.$$in{'md5'} %>/<%= $$in{'md5'} %>.jpg <%= $config->{'tmp_dir'} %>/resize_<%= $$in{'md5'} %>.jpg;
 done;
 echo "----- End pdf2jpg";
 

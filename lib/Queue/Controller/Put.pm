@@ -65,6 +65,13 @@ print Dumper(\%in);
 
 	# make conversion
 	unless ($error) {
+		if ($in{'conversion_type'}) {
+			if (-e "$config->{'home_dir'}/layouts/$in{'conversion_type'}") {
+				# get shell commands from templates
+				$queue_id = $self->create_job($in{'conversion_type'}, \%in);
+			}
+			else { $error++; }
+=comment
 		if ($in{'conversion_type'} eq 'pdf2jpg') {
 			# set up command line for making conversion to include it in pipe
 			# create ./tmp dir
@@ -86,23 +93,25 @@ print Dumper(\%in);
 			$queue_id = $self->create_job('psd2jpg', \%in);
 #			$queue_id = psd2png(\%in, $config);
 		}
-		else {
-			$error++;
+=cut
+		else { $error++; }
+
+		if ($error) {
 			$out = {
 				'status'	=> 415,
 				'reason'	=> $config->{messages}->{'not_support_conversion'}.$in{'conversion_type'}
 			};
 		}
-
-		# check created job id
-		unless ($queue_id) {
-			$error++;
-			$out = {
-				'status'	=> 409,
-				'reason'	=> $config->{messages}->{'not_created_job'}
-			};
+		else {
+			# check created job id
+			unless ($queue_id) {
+				$error++;
+				$out = {
+					'status'	=> 409,
+					'reason'	=> $config->{messages}->{'not_created_job'}
+				};
+			}
 		}
-	
 	}
 
 	unless ($error) {
