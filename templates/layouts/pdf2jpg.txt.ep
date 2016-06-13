@@ -18,6 +18,9 @@ do
 
 	echo "----- resize jpg into <%= $$in{'size_sum'} %>";
 	<%= $config->{'exec_apps'}->{'convert'} %> -verbose <% if ($$in{'size_sum'}) { %>-size <%= $$in{'size_sum'} %><% } %> <%= $config->{'output_dir'}.'/'.$$in{'md5'} %>/<%= $$in{'md5'} %>.jpg <%= $config->{'tmp_dir'} %>/resize_<%= $$in{'md5'} %>.jpg;
+
+	echo "----- move resize jpg into result dir";
+	mv <%= $config->{'tmp_dir'} %>/resize_<%= $$in{'md5'} %>.jpg <%= $config->{'output_dir'}.'/'.$$in{'md5'} %>/<%= $$in{'md5'} %>.jpg;
 done;
 echo "----- End pdf2jpg";
 

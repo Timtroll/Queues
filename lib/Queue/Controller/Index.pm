@@ -35,8 +35,8 @@ sub job_add {
 	%in = (
 		'action'			=> 'put',
 		'conversion_type'	=> $self->param('conversion_type'),
-		'source'			=> './test.pdf',
-		'output'			=> '/home/ouput_dir/',
+		'source'			=> '',
+		'output'			=> '',
 		'quality'			=> 100,
 		'resolution'		=> 72,
 		'password'			=> 'textpass',

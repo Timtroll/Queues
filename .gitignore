@@ -1,4 +1,3 @@
 /storage
-/sockets
+/output_dir
 /tmp
-queue.conf

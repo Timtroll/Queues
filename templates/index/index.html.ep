@@ -26,7 +26,7 @@
 		<div><b>Еxecuted list</b></div>
 %	if (scalar(keys %{$done})) {
 %		foreach (sort {$a cmp $b} keys %{$done}) {
-		<li><a href="/status?pid=<%= $_ %>" target="_blank"><%= substr($_, 0, 30) %></a>&nbsp;&nbsp;<a href="/killer?pid=<%= $_ %>">X</a></li>
+		<li><a href="/status?pid=<%= $_ %>" target="_blank"><%= substr($_, 0, 30) %></a>&nbsp;&nbsp;<% if ($$pids{$_}->{'killed'}) { %>Killed<% } %></li>
 %		}
 %	} else {
 	<li>Nothing</li>

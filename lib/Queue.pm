@@ -34,13 +34,13 @@ sub startup {
 	my $sessions = Mojolicious::Sessions->new;
 	$sessions->cookie_name('session');
 
-	$self->plugin('database', { 
-		dsn	  		=> $config->{database}->{dsn},
-		username	=> $config->{database}->{username},
-		password	=> $config->{database}->{password},
-		options		=> { RaiseError => 1,  PrintError => 1 , mysql_enable_utf8 => 1 , mysql_auto_reconnect => 1},
-		helper		=> 'db',
-	});
+#	$self->plugin('database', { 
+#		dsn	  		=> $config->{database}->{dsn},
+#		username	=> $config->{database}->{username},
+#		password	=> $config->{database}->{password},
+#		options		=> { RaiseError => 1,  PrintError => 1 , mysql_enable_utf8 => 1 , mysql_auto_reconnect => 1},
+#		helper		=> 'db',
+#	});
 
 	# Router
 	my $r = $self->routes;
