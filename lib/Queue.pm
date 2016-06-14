@@ -7,8 +7,6 @@ use Mojo::Base 'Mojolicious';
 use Mojolicious::Plugin::Database;
 use Mojolicious::Plugin::Config;
 
-#use IO::Handle;
-
 use common;
 
 has [qw( db config messages queue_l pids_l done_l)];

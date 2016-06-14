@@ -1,5 +1,13 @@
 Manufactured by Timothy Zhouravlyuov
 
+Required:
+Mojolicious
+Mojolicious::Plugin::Database
+Mojolicious::Plugin::Config
+Digest::MD5
+JSON::XS
+Time::HiRes
+
 Notice:
 - current version optimized to linux Debian
 - ability to scale an unlimited amount of processing nodes.
@@ -135,7 +143,7 @@ or
 Done action requests
 === Example ===
 POST/GET request
-url: "/dome"
+url: "/done"
 {
 	action:		done,
 	md5:		ccd648ff6a3af3294871244153b05cc8		(md5 hash for indentify current job)

@@ -13,8 +13,11 @@ sub index {
 	my ($self, %data);
 	$self = shift;
 
+print "queue\n";
 print Dumper($queue_l);
+print "pids\n";
 print Dumper($pids_l);
+print "done\n";
 print Dumper($done_l);
 
 	%data = (
@@ -70,8 +73,11 @@ sub job_status {
 	my ($self, $pid, $line, $status, $msg, %data);
 	$self = shift;
 
+print "queue\n";
 print Dumper($queue_l);
+print "pids\n";
 print Dumper($pids_l);
+print "done\n";
 print Dumper($done_l);
 
 	# Get info from running tasks
@@ -100,8 +106,11 @@ sub job_kill {
 	my ($self, $pid, %data);
 	$self = shift;
 
+print "queue\n";
 print Dumper($queue_l);
+print "pids\n";
 print Dumper($pids_l);
+print "done\n";
 print Dumper($done_l);
 
 	# kill exists process
@@ -130,8 +139,11 @@ sub job_done {
 	# get all messages & remove process 
 	$pid = $self->param('pid');
 print ">>>>> $pid  <<<<<<<\nqueue = $$queue_l{$pid}\npids = $$pids_l{$pid}\ndone = $$done_l{$pid}\n";
+print "queue\n";
 print Dumper($queue_l);
+print "pids\n";
 print Dumper($pids_l);
+print "done\n";
 print Dumper($done_l);
 
 

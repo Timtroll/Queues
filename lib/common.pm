@@ -8,7 +8,6 @@ use JSON::XS;
 use Time::HiRes qw(gettimeofday);
 use Data::Dumper;
 
-#use Mojo::Home;
 use Exporter();
 use vars qw( @ISA @EXPORT @EXPORT_OK $config $messages $queue_l $pids_l $done_l );
 
@@ -35,11 +34,25 @@ BEGIN {
 		#'SSL_VERIFY_NONE'
 	);
 	$ENV{PERL_LWP_SSL_VERIFY_HOSTNAME} = '0';
-};
 
-$queue_l = \%queue_h;
-$pids_l = \%pids_h;
-$done_l = \%done_h;
+	$queue_l = \%queue_h;
+	$pids_l = \%pids_h;
+	$done_l = \%done_h;
+print Dumper($queue_l);
+print Dumper($pids_l);
+print Dumper($done_l);
+	# load jobs from stored and run Pids-queue
+	if (scalar(keys %pids_h)) {
+		# Run jobs from Pids
+		my $limit = $config->{'limit'};
+		foreach (keys %pids_h) {
+			my $dir = $pids_h{$_}->{'log'};
+			$dir =~ s/\..*?$//;
+			run_job($dir);
+			$limit--;
+		}
+	}
+};
 
 ############ queues ############
 
@@ -78,7 +91,7 @@ sub load_queue {
 	elsif ($type eq 'pids') { $link = \%pids_h; }
 	elsif ($type eq 'done') { $link = \%done_h; }
 
-	if (-e "$config->{'storage_dir'}/$type") {
+	if (-s "$config->{'storage_dir'}/$type") {
 		$json_xs = JSON::XS->new();
 		$json_xs->utf8(1);
 
@@ -186,6 +199,8 @@ sub move_job {
 sub done_job {
 	my ($line, $pid, $status);
 	$pid = shift;
+
+# ???? сделать выбор из предзадач и контроль текущих задач
 
 	# Check exists job & output data from them
 	if (exists $pids_h{$pid}) {
@@ -309,14 +324,16 @@ print "$dir\n";
 				unless ($status) { return 0, ''; }
 			}
 
-# ???? сделать выбор из предзадач и контроль текущих задач
-
-			# run command to run and write output into file in background 
-			run_background("$dir/$$in{'md5'}.sh", "$dir/$$in{'md5'}.log");
-			chmod_minus("$dir/$$in{'md5'}.sh");
+			# run command and write output into file in background
+			run_job("$dir/$$in{'md5'}");
 		}
 
-		# reload list of jobs
+		# store and reload list of jobs
+		$status = store_queue('queue');
+		unless ($status) { return 'queue'; }
+		$status = store_queue('pids');
+		unless ($status) { return 'queue'; }
+
 # ???????? create exec check
 
 		# return name of the job
@@ -326,6 +343,15 @@ print "$dir\n";
 print "00000\n";
 		return 0, '';
 	}
+}
+
+sub run_job {
+	my $name = shift;
+
+	run_background("$name.sh", "$name.log");
+	chmod_minus("$name.sh");
+
+	return;
 }
 
 sub check_job {
