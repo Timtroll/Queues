@@ -13,12 +13,12 @@ sub index {
 	my ($self, %data);
 	$self = shift;
 
-print "queue\n";
-print Dumper(\%queue);
-print "pids=\n";
-print Dumper(\%pids);
-print "done\n";
-print Dumper(\%done);
+#print "queue\n";
+#print Dumper(\%queue);
+#print "pids=\n";
+#print Dumper(\%pids);
+#print "done\n";
+#print Dumper(\%done);
 
 	%data = (
 		queue	=> \%queue,
@@ -73,19 +73,22 @@ sub job_status {
 	my ($self, $pid, $line, $status, $msg, %data);
 	$self = shift;
 
-print "queue\n";
-print Dumper(\%queue);
-print "pids\n";
-print Dumper(\%pids);
-print "done\n";
-print Dumper(\%done);
+#print "queue\n";
+#print Dumper(\%queue);
+#print "pids\n";
+#print Dumper(\%pids);
+#print "done\n";
+#print Dumper(\%done);
 
 	# Get info from running tasks
 	$pid = $self->param('pid');
 	($line, $status) = info_job($pid);
 	$msg = ' ';
-	unless ($status) {
+	if (!$status && !$line) {
 		$msg = $config->{'messages'}->{'not_exists_job'};
+	}
+	elsif (!$status && $line) {
+		$msg = $line;
 	}
 
 	# Render template "index/status.html.ep" with message
@@ -106,12 +109,12 @@ sub job_kill {
 	my ($self, $pid, %data);
 	$self = shift;
 
-print "queue\n";
-print Dumper(\%queue);
-print "pids\n";
-print Dumper(\%pids);
-print "done\n";
-print Dumper(\%done);
+#print "queue\n";
+#print Dumper(\%queue);
+#print "pids\n";
+#print Dumper(\%pids);
+#print "done\n";
+#print Dumper(\%done);
 
 	# kill exists process
 	$pid = $self->param('pid');
@@ -138,12 +141,12 @@ sub job_done {
 
 	# get all messages & remove process 
 	$pid = $self->param('pid');
-print "queue\n";
-print Dumper(\%queue);
-print "pids\n";
-print Dumper(\%pids);
-print "done\n";
-print Dumper(\%done);
+#print "queue\n";
+#print Dumper(\%queue);
+#print "pids\n";
+#print Dumper(\%pids);
+#print "done\n";
+#print Dumper(\%done);
 
 
 	if ($pid) {

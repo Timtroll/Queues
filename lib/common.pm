@@ -76,9 +76,23 @@ sub store_queues {
 }
 
 sub load_queues {
-	load_queue('queue');
-	load_queue('pids');
-	load_queue('done');
+	my ($status, @message);
+
+	$status = load_queue('queue');
+	unless ($status) { push @message, $config-{'messages'}->{'can_not_open_queue'}."'queue'"; }
+
+	$status = load_queue('pids');
+	unless ($status) { push @message, $config-{'messages'}->{'can_not_open_queue'}."'pids'"; }
+
+	$status = load_queue('done');
+	unless ($status) { push @message, $config-{'messages'}->{'can_not_open_queue'}."'done'"; }
+
+	# create error messages
+	if (scalar(@message)) {
+		$messages = join("\n", @message);
+	}
+
+	return $status, $messages;
 }
 
 sub load_queue {
@@ -86,6 +100,7 @@ sub load_queue {
 	$type = shift;
 
 	# when read all jobs from storage will be replaced exists keys and values
+	$status = 1;
 	if (-s "$config->{'storage_dir'}/$type") {
 		$json_xs = JSON::XS->new();
 		$json_xs->utf8(1);
@@ -200,17 +215,38 @@ sub move_job {
 }
 
 sub done_job {
-	my ($line, $pid, $status);
+	my ($line, $pid, $count, $dir, $status);
 	$pid = shift;
 
-# ???? сделать выбор из предзадач и контроль текущих задач
-print "Done\n";
 	# Check exists job & output data from them
 	if (exists $pids{$pid}) {
 print "$pid = $pids{$pid}\n";
 		# move pid to done hash
 		$status = move_job('pids', 'done', $pid);
 		unless ($status) { return 0; }
+
+		# check limit for running jobs and run prepared jobs
+		$count = $config->{'limit'} - scalar(keys %pids);
+		if ($count) {
+			foreach (sort {$queue{$b}->{'time'} <=> $queue{$a}->{'time'}} keys %queue) {
+				# run prepared job if exists place in pids queue
+				if ($count) {
+					$dir = $queue{$_}->{'log'};
+					$dir =~ s/\..*?$//;
+
+					# move pid to done hash
+					$status = move_job('queue', 'pids', $_);
+					if ($status) {
+						run_job($dir);
+					}
+					else {
+# ????? create error if do not move job
+					}
+					$dir = '';
+				}
+				$count--;
+			}
+		}
 
 		# store queues
 		$status = store_queues();
@@ -224,12 +260,12 @@ print "$pid = $pids{$pid}\n";
 }
 
 sub info_job {
-	my ($line, $pid, $link, $status);
+	my ($line, $pid, $link, $status, $mess);
 	$pid = shift;
 
 	# Read list of job after reloading mode
-	$status = load_queues();
-	unless ($status) { return '', 0; }
+	($status, $mess) = load_queues();
+	unless ($status) { return $mess, 0; }
 
 	if (exists $queue{$pid}) { $link = $queue{$pid} }
 	elsif (exists $pids{$pid}) { $link = $pids{$pid} }
@@ -241,7 +277,7 @@ sub info_job {
 		if (-e $link->{'log'}) {
 			$line = `cat $link->{'log'}`;
 		}
-		else { return '', 0; }
+		else { return $config->{'messages'}->{'not_exists_log'}, 0; }
 
 		return $line, 1;
 	}

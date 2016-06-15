@@ -11,7 +11,7 @@
 
 % if ($pid) {
 %	if ($$queue{$pid}) {
-	<li>Queue to run</li>
+	<li>Queue prepared to run: <%= $pid %></li>
 %	} elsif ($$pids{$pid}) {
 	<li>Running</li>
 %	} elsif ($$done{$pid}) {
@@ -19,10 +19,12 @@
 %	}
 % }
 
-% if ($line) {
+% unless ($msg) {
+%	if ($line) {
 	<hr>
 %==	join("<br>", split("\n", $line));
-% } else {
+%	} else {
 	<li>Nothing</li>
+%	}
 % }
 
