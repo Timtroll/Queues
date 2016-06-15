@@ -14,16 +14,16 @@ sub index {
 	$self = shift;
 
 print "queue\n";
-print Dumper($queue_l);
-print "pids\n";
-print Dumper($pids_l);
+print Dumper(\%queue);
+print "pids=\n";
+print Dumper(\%pids);
 print "done\n";
-print Dumper($done_l);
+print Dumper(\%done);
 
 	%data = (
-		queue	=> $queue_l,
-		pids	=> $pids_l,
-		done	=> $done_l,,
+		queue	=> \%queue,
+		pids	=> \%pids,
+		done	=> \%done,
 		title	=> 'Main page',
 		msg		=> ' '
 	);
@@ -60,9 +60,9 @@ sub job_add {
 
 	# Render list of jobs template "index/test.html.ep"
 	%data = (
-		queue	=> $queue_l,
-		pids	=> $pids_l,
-		done	=> $done_l,
+		queue	=> \%queue,
+		pids	=> \%pids,
+		done	=> \%done,
 		title	=> 'Queues page',
 		msg		=> $msg
 	);
@@ -74,11 +74,11 @@ sub job_status {
 	$self = shift;
 
 print "queue\n";
-print Dumper($queue_l);
+print Dumper(\%queue);
 print "pids\n";
-print Dumper($pids_l);
+print Dumper(\%pids);
 print "done\n";
-print Dumper($done_l);
+print Dumper(\%done);
 
 	# Get info from running tasks
 	$pid = $self->param('pid');
@@ -90,9 +90,9 @@ print Dumper($done_l);
 
 	# Render template "index/status.html.ep" with message
 	%data = (
-		queue	=> $queue_l, 
-		pids	=> $pids_l, 
-		done	=> $done_l,
+		queue	=> \%queue, 
+		pids	=> \%pids, 
+		done	=> \%done,
  
 		title	=> "Information about pid=$pid",
 		pid		=> $pid,
@@ -107,25 +107,25 @@ sub job_kill {
 	$self = shift;
 
 print "queue\n";
-print Dumper($queue_l);
+print Dumper(\%queue);
 print "pids\n";
-print Dumper($pids_l);
+print Dumper(\%pids);
 print "done\n";
-print Dumper($done_l);
+print Dumper(\%done);
 
 	# kill exists process
 	$pid = $self->param('pid');
 	if ($pid) {
-		if (exists $$pids_l{$pid}) {
+		if (exists $pids{$pid}) {
 			# kill process
 			kill_job($pid);
 		}
 	}
 
 	%data = (
-		queue	=> $queue_l,
-		pids	=> $pids_l,
-		done	=> $done_l,
+		queue	=> \%queue,
+		pids	=> \%pids,
+		done	=> \%done,
 		title	=> "Killed job",
 		msg		=> "Killed job pid = $pid"
 	);
@@ -138,17 +138,16 @@ sub job_done {
 
 	# get all messages & remove process 
 	$pid = $self->param('pid');
-print ">>>>> $pid  <<<<<<<\nqueue = $$queue_l{$pid}\npids = $$pids_l{$pid}\ndone = $$done_l{$pid}\n";
 print "queue\n";
-print Dumper($queue_l);
+print Dumper(\%queue);
 print "pids\n";
-print Dumper($pids_l);
+print Dumper(\%pids);
 print "done\n";
-print Dumper($done_l);
+print Dumper(\%done);
 
 
 	if ($pid) {
-		if ($$pids_l{$pid}) {
+		if (exists $pids{$pid}) {
 			# get all messages & remove process 
 			$status = done_job($pid);
 

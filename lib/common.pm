@@ -9,7 +9,7 @@ use Time::HiRes qw(gettimeofday);
 use Data::Dumper;
 
 use Exporter();
-use vars qw( @ISA @EXPORT @EXPORT_OK $config $messages $queue_l $pids_l $done_l );
+use vars qw( @ISA @EXPORT @EXPORT_OK $config $messages %queue %pids %done );
 
 use utf8;
 $| = 1;
@@ -18,14 +18,14 @@ use libbash;
 
 our @ISA = qw( Exporter );
 our @EXPORT = qw(
-	$config $messages $queue_l $pids_l $done_l 
+	$config $messages %queue %pids %done 
 	&done_job &info_job &create_job &kill_job &get_pdf_res &load_queues &store_queues
 );
 
-our ($config, $messages, $queue_l, $pids_l, $done_l);
-my %queue_h = ();
-my %pids_h = ();
-my %done_h = ();
+our ($config, $messages, %queue, %pids, %done);
+%queue = ();
+%pids = ();
+%done = ();
 
 BEGIN {
 	# set not verify ssl connection
@@ -35,23 +35,22 @@ BEGIN {
 	);
 	$ENV{PERL_LWP_SSL_VERIFY_HOSTNAME} = '0';
 
-	$queue_l = \%queue_h;
-	$pids_l = \%pids_h;
-	$done_l = \%done_h;
-print Dumper($queue_l);
-print Dumper($pids_l);
-print Dumper($done_l);
+=comment
+print Dumper(\%queue);
+print Dumper(\%pids);
+print Dumper(\%done);
 	# load jobs from stored and run Pids-queue
-	if (scalar(keys %pids_h)) {
+	if (scalar(keys %pids)) {
 		# Run jobs from Pids
 		my $limit = $config->{'limit'};
-		foreach (keys %pids_h) {
-			my $dir = $pids_h{$_}->{'log'};
+		foreach (keys %pids) {
+			my $dir = $pids{$_}->{'log'};
 			$dir =~ s/\..*?$//;
 			run_job($dir);
 			$limit--;
 		}
 	}
+=cut
 };
 
 ############ queues ############
@@ -60,26 +59,26 @@ sub store_queues {
 	my ($type, $pid, $status);
 	($type, $pid) = @_;
 
-	if (scalar(keys %queue_h)) {
+	if (scalar(keys %queue)) {
 		$status = store_queue('queue');
 		unless ($status) { return 'queue'; }
 	}
 
-	if (scalar(keys %pids_h)) {
+	if (scalar(keys %pids)) {
 		$status = store_queue('pids');
 		unless ($status) { return 'pids'; }
 	}
 
-	if (scalar(keys %done_h)) {
+	if (scalar(keys %done)) {
 		$status = store_queue('done');
 		unless ($status) { return 'done'; }
 	}
 }
 
 sub load_queues {
-	$queue_l = load_queue('queue');
-	$pids_l = load_queue('pids');
-	$done_l = load_queue('done');
+	load_queue('queue');
+	load_queue('pids');
+	load_queue('done');
 }
 
 sub load_queue {
@@ -87,10 +86,6 @@ sub load_queue {
 	$type = shift;
 
 	# when read all jobs from storage will be replaced exists keys and values
-	if ($type eq 'queue') { $link = \%queue_h; }
-	elsif ($type eq 'pids') { $link = \%pids_h; }
-	elsif ($type eq 'done') { $link = \%done_h; }
-
 	if (-s "$config->{'storage_dir'}/$type") {
 		$json_xs = JSON::XS->new();
 		$json_xs->utf8(1);
@@ -101,15 +96,21 @@ sub load_queue {
 					$val = $json_xs->decode($line);
 
 					# check key and value
-					if ($val->{'md5'}) {
-						$$link{$val->{'md5'}} = { %{$val} };
+					if (exists $val->{'md5'}) {
+						if ($type eq 'queue') { $queue{$val->{'md5'}} = { %{$val} }; }
+						elsif ($type eq 'pids') { $pids{$val->{'md5'}} = { %{$val} }; }
+						elsif ($type eq 'done') { $done{$val->{'md5'}} = { %{$val} }; }
 					}
 				}
-			} (keys %{$link});
+			};
 		close (FILE) or $status = 0;
 	}
+	else {
+		unlink "$config->{'storage_dir'}/$type";
+	}
 
-	return $link;
+	return $status;
+#	return $link;
 }
 
 sub store_queue {
@@ -124,20 +125,22 @@ sub store_queue {
 	}
 	else {
 		# create link to queue which are store (queue pids done)
-		if ($type eq 'queue') { $link = \%queue_h; }
-		elsif ($type eq 'pids') { $link = \%pids_h; }
-		elsif ($type eq 'done') { $link = \%done_h; }
+		if ($type eq 'queue') { $link = \%queue; }
+		elsif ($type eq 'pids') { $link = \%pids; }
+		elsif ($type eq 'done') { $link = \%done; }
 		else { return 3; }
 
-		$cnt = scalar(keys %{$link}) - 1;
+		$cnt = scalar(keys %{$link});
 		if (($status == 1)&&($cnt)) {
 			$json_xs = JSON::XS->new();
 			$json_xs->utf8(1);
 
 			open (FILE, ">$config->{'storage_dir'}/$type") or $status = 0;
 				map {
-					$line = $json_xs->encode($$link{$_});
-					if ($cnt) { $line .= "\n"; }
+					if ($type eq 'queue') { $line = $json_xs->encode($queue{$_}); }
+					elsif ($type eq 'pids') { $line = $json_xs->encode($pids{$_}); }
+					elsif ($type eq 'done') { $line = $json_xs->encode($done{$_}); }
+					if ($cnt > 1) { $line .= "\n"; }
 					print FILE $line;
 					$cnt--;
 				} (keys %{$link});
@@ -151,42 +154,42 @@ sub store_queue {
 sub move_job {
 	my ($from_type, $to_type, $pid, $killed) = @_;
 
-#	$queue_l = load_queue('queue');
+#	$queue = load_queue('queue');
 #	$pids_l = load_queue('pids');
-#	$done_l = load_queue('done');
+#	$done = load_queue('done');
 
 	if ($from_type eq 'queue') {
-		if (exists $queue_h{$pid}) {
-			$pids_h{$pid} = $queue_h{$pid};
-			delete $queue_h{$pid};
+		if (exists $queue{$pid}) {
+			$pids{$pid} = $queue{$pid};
+			delete $queue{$pid};
 		}
 		else { return 0; }
 	}
 	elsif ($from_type eq 'pids') {
-		if (exists $pids_h{$pid}) {
+		if (exists $pids{$pid}) {
 			# delete olderst element from done queue if exceed done-limit
-			if (scalar(keys %done_h) > $config->{'limit_show_done'}) {
-				foreach (sort {$done_h{$a}->{'time'} <=> $done_h{$b}->{'time'}} keys %done_h) {
-					delete $done_h{$_};
+			if (scalar(keys %done) > $config->{'limit_show_done'}) {
+				foreach (sort {$done{$a}->{'time'} <=> $done{$b}->{'time'}} keys %done) {
+					delete $done{$_};
 					last;
 				}
 			}
 
 			# set status 'killed' if job was kill
 			if ($killed) {
-				$pids_h{$pid}->{'killed'} = 1;
+				$pids{$pid}->{'killed'} = 1;
 			}
 
-			$done_h{$pid} = $pids_h{$pid};
-			delete $pids_h{$pid};
+			$done{$pid} = $pids{$pid};
+			delete $pids{$pid};
 		}
 		else { return 0; }
 	}
 	elsif ($from_type eq 'done') {
-		if (exists $done_h{$pid}) {
+		if (exists $done{$pid}) {
 			# set status 'killed' if job was kill
 			if ($killed) {		
-				$done_h{$pid}->{'killed'} = 1;
+				$done{$pid}->{'killed'} = 1;
 			}
 		}
 		else { return 0; }
@@ -201,9 +204,10 @@ sub done_job {
 	$pid = shift;
 
 # ???? сделать выбор из предзадач и контроль текущих задач
-
+print "Done\n";
 	# Check exists job & output data from them
-	if (exists $pids_h{$pid}) {
+	if (exists $pids{$pid}) {
+print "$pid = $pids{$pid}\n";
 		# move pid to done hash
 		$status = move_job('pids', 'done', $pid);
 		unless ($status) { return 0; }
@@ -227,9 +231,9 @@ sub info_job {
 	$status = load_queues();
 	unless ($status) { return '', 0; }
 
-	if (exists $queue_h{$pid}) { $link = $queue_h{$pid} }
-	elsif (exists $pids_h{$pid}) { $link = $pids_h{$pid} }
-	elsif (exists $done_h{$pid}) { $link = $done_h{$pid} }
+	if (exists $queue{$pid}) { $link = $queue{$pid} }
+	elsif (exists $pids{$pid}) { $link = $pids{$pid} }
+	elsif (exists $done{$pid}) { $link = $done{$pid} }
 	else { $link = undef; }
 
 	if ($link) {
@@ -289,20 +293,22 @@ sub create_job {
 	# check number of jobs
 	$dir = "$$in{'source'}/$$in{'md5'}";
 	$tm = gettimeofday();
-	if (scalar(keys %pids_h) >= $config->{'limit'}) {
+	if (scalar(keys %pids) >= $config->{'limit'}) {
 		# add job into queue which wait to exec
-		$queue_h{$$in{'md5'}} = {
+		$queue{$$in{'md5'}} = {
 			'log' 	=> "$dir/$$in{'md5'}.log",
 			'killed'=> 0,
-			'time'	=> $tm
+			'time'	=> $tm,
+			'md5'	=> $$in{'md5'}
 		};
 	}
 	else {
 		# store name of new job md5 hash into job storage and path for output data
-		$pids_h{$$in{'md5'}} = {
+		$pids{$$in{'md5'}} = {
 			'log' 	=> "$dir/$$in{'md5'}.log",
 			'killed'=> 0,
-			'time'	=> $tm
+			'time'	=> $tm,
+			'md5'	=> $$in{'md5'}
 		}
 	}
 
@@ -314,10 +320,10 @@ sub create_job {
 print "$dir\n";
 	if (-d "$dir") {
 		# run command if exec limit is not exceeded
-print "$config->{'limit'} >= ", scalar(keys %pids_h), "\n";
-		if ($config->{'limit'} >= scalar(keys %pids_h)) {
+print "$config->{'limit'} >= ", scalar(keys %pids), "\n";
+		if ($config->{'limit'} >= scalar(keys %pids)) {
 			# remove job from queue which wait to exec if exists
-			if (exists $queue_h{$$in{'md5'}}) {
+			if (exists $queue{$$in{'md5'}}) {
 print "$dir\n";
 				# move pid to done hash
 				$status = move_job('queue', 'pids', $$in{'md5'});
@@ -335,6 +341,10 @@ print "$dir\n";
 		unless ($status) { return 'queue'; }
 
 # ???????? create exec check
+
+#	# Read list of job after reloading mode
+#	$status = load_queues();
+#	unless ($status) { return '', 0; }
 
 		# return name of the job
 		return $$in{'md5'}, '';
@@ -360,9 +370,9 @@ sub check_job {
 
 	$status = 0;
 	if ($pid) {
-		if (exists $queue_h{$pid}) { $status = 1; }
-		if (exists $pids_h{$pid}) { $status = 1; }
-		if (exists $done_h{$pid}) { $status = 1; }
+		if (exists $queue{$pid}) { $status = 1; }
+		if (exists $pids{$pid}) { $status = 1; }
+		if (exists $done{$pid}) { $status = 1; }
 		if ($status) { return 1, $config->{'messages'}->{'exists_job'}; }
 	}
 	else {
@@ -376,7 +386,7 @@ sub kill_job {
 	my ($pid, $list, $status, $store, @list, @tmp);
 	$pid = shift;
 
-	if ($pids_h{$pid}) {
+	if ($pids{$pid}) {
 		# find pids of all running jobs for current pid
 		ps_jobs($pid);
 
@@ -398,15 +408,15 @@ sub kill_job {
 
 		# delete job from queue list
 		$status = 1;
-		if (exists $queue_h{$pid}) {
-			delete $queue_h{$pid};
+		if (exists $queue{$pid}) {
+			delete $queue{$pid};
 		}
-		elsif (exists $pids_h{$pid}) {
+		elsif (exists $pids{$pid}) {
 			# move pid to done hash & write interupt message into job-log
 			$status = move_job('pids', 'done', $pid, 'killed');
 			unless ($status) { $status = 0; }
 		}
-		elsif (exists $done_h{$pid}) {
+		elsif (exists $done{$pid}) {
 			# write interupt message into job-log
 			$status = move_job('done', 'done', $pid, 'killed');
 			unless ($status) { $status = 0; }
@@ -447,48 +457,6 @@ sub create_md5 {
 	$md5 = md5_hex($md5.time());
 
 	return $md5;
-}
-
-sub get_pdf_res {
-	my ($file, $line, $resp, $config, %out);
-	$file = shift;
-	$config = shift;
-
-	pdf_info($file);
-#	$resp = `pdfinfo -f 1 -l -1 $file 2>&1`;
-
-	$out{'error'} = 0;
-	if ($resp =~ /Incorrect password/) {
-		$out{'error'} = "55";
-		$out{'reason'} = $config->{'messages'}->{'password_protected'};
-		return \%out;
-	}
-	if (($resp =~ /Error/) and (! $resp =~ /Expected the optional/)) {
-		$out{'error'} = "51";
-		$out{'reason'} = $config->{'messages'}->{'expected_optional'};
-		return \%out;
-	}
-	if ($resp =~ /.*Pages\:.*?(\d+)/) {
-		$out{'num_pages'} = $1;
-	}
-	if ($resp =~ /Page.*?size\:.*?(\d+\s+x\s+\d+).*?pts/) {
-		($out{'width'}, $out{'height'}) = split(/\s+x\s+/, $1);
-		unless ($out{'width'} || $out{'height'}) {
-			$out{'error'} = "404";
-			$out{'reason'} = $config->{'messages'}->{'not_exists_resolution'};
-			return \%out;
-		}
-		$out{'width'} =~ s/\D//goi;
-		$out{'height'} =~ s/\D//goi;
-	}
-
-	if ($out{'width'} > $out{'height'}) { $out{'orientation'} = "L"; }
-	else { $out{'orientation'} = "P"; }
-
-	## May have variable page sizes within the same document so always use custom
-	$out{'paper_type'} = "custom";
-
-	return \%out;
 }
 
 1;

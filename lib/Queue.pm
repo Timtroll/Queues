@@ -9,7 +9,7 @@ use Mojolicious::Plugin::Config;
 
 use common;
 
-has [qw( db config messages queue_l pids_l done_l)];
+has [qw( db config messages queue pids done)];
 
 # This method will run once at server start
 sub startup {
