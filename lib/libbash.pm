@@ -18,7 +18,9 @@ sub run_background {
 	$file = shift;
 	$log = shift;
 
+write_logg("$file > $log &");
 	$line = `$file > $log &`;
+write_logg($line);
 
 	return $line;
 }
@@ -97,4 +99,13 @@ sub pdf_info {
 	return $line;
 }
 
+sub write_logg {
+	my $data = shift;
+
+	open (FILE, ">>/home/timofey/works/code/mojo/queue/log_run.txt");
+		print FILE "$data\n";
+	close (FILE);
+}
+
+1;
 

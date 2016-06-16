@@ -44,9 +44,7 @@ print Dumper(\%done);
 		# Run jobs from Pids
 		my $limit = $config->{'limit'};
 		foreach (keys %pids) {
-			my $dir = $pids{$_}->{'log'};
-			$dir =~ s/\..*?$//;
-			run_job($dir);
+			run_job($pids{$_}->{'log'});
 			$limit--;
 		}
 	}
@@ -106,8 +104,9 @@ sub load_queue {
 		$json_xs->utf8(1);
 
 		open (FILE, "<$config->{'storage_dir'}/$type") or $status = 0;
-			 while (chomp($line = <FILE>)) {
+			 while ($line = <FILE>) {
 				if ($line) {
+					$line =~ s/(\n|\r)//goi;
 					$val = $json_xs->decode($line);
 
 					# check key and value
@@ -125,7 +124,6 @@ sub load_queue {
 	}
 
 	return $status;
-#	return $link;
 }
 
 sub store_queue {
@@ -167,16 +165,15 @@ sub store_queue {
 }
 
 sub move_job {
-	my ($from_type, $to_type, $pid, $killed) = @_;
-
-#	$queue = load_queue('queue');
-#	$pids_l = load_queue('pids');
-#	$done = load_queue('done');
+	my ($from_type, $to_type, $pid, $dir, $killed) = @_;
 
 	if ($from_type eq 'queue') {
 		if (exists $queue{$pid}) {
 			$pids{$pid} = $queue{$pid};
 			delete $queue{$pid};
+
+			# run moved job
+			run_job($queue{$pid}->{'log'});
 		}
 		else { return 0; }
 	}
@@ -223,25 +220,19 @@ sub done_job {
 print "$pid = $pids{$pid}\n";
 		# move pid to done hash
 		$status = move_job('pids', 'done', $pid);
-		unless ($status) { return 0; }
+#		unless ($status) { return 0; }
 
 		# check limit for running jobs and run prepared jobs
 		$count = $config->{'limit'} - scalar(keys %pids);
 		if ($count) {
 			foreach (sort {$queue{$b}->{'time'} <=> $queue{$a}->{'time'}} keys %queue) {
 				# run prepared job if exists place in pids queue
-				if ($count) {
+				if ($count > 0) {
 					$dir = $queue{$_}->{'log'};
 					$dir =~ s/\..*?$//;
 
 					# move pid to done hash
 					$status = move_job('queue', 'pids', $_);
-					if ($status) {
-						run_job($dir);
-					}
-					else {
-# ????? create error if do not move job
-					}
 					$dir = '';
 				}
 				$count--;
@@ -267,10 +258,11 @@ sub info_job {
 	($status, $mess) = load_queues();
 	unless ($status) { return $mess, 0; }
 
-	if (exists $queue{$pid}) { $link = $queue{$pid} }
-	elsif (exists $pids{$pid}) { $link = $pids{$pid} }
-	elsif (exists $done{$pid}) { $link = $done{$pid} }
-	else { $link = undef; }
+	$line = '';
+	if (exists $queue{$pid}) { $line = $queue{$pid}->{'log'}; }
+	elsif (exists $pids{$pid}) { $line = $pids{$pid}->{'log'}; }
+	elsif (exists $done{$pid}) { $line = $done{$pid}->{'log'}; }
+	else { $line = undef; }
 
 	if ($link) {
 		# read log from current job
@@ -353,28 +345,35 @@ sub create_job {
 	echo_command($cmd, "$dir/$$in{'md5'}.sh");
 	chmod_plus("$dir/$$in{'md5'}.sh");
 
+	# run command and write output into file in background
+	run_job("$dir/$$in{'md5'}");
+
 print "$dir\n";
 	if (-d "$dir") {
 		# run command if exec limit is not exceeded
-print "$config->{'limit'} >= ", scalar(keys %pids), "\n";
-		if ($config->{'limit'} >= scalar(keys %pids)) {
+print "$config->{'limit'} > ", scalar(keys %pids), "\n";
+		if ($config->{'limit'} > scalar(keys %pids)) {
 			# remove job from queue which wait to exec if exists
 			if (exists $queue{$$in{'md5'}}) {
 print "$dir\n";
 				# move pid to done hash
 				$status = move_job('queue', 'pids', $$in{'md5'});
 				unless ($status) { return 0, ''; }
-			}
 
-			# run command and write output into file in background
-			run_job("$dir/$$in{'md5'}");
+				# run command and write output into file in background
+				run_job($pids{$$in{'md5'}});
+			}
 		}
 
-		# store and reload list of jobs
-		$status = store_queue('queue');
-		unless ($status) { return 'queue'; }
-		$status = store_queue('pids');
-		unless ($status) { return 'queue'; }
+		# store queues
+		$status = store_queues();
+		unless ($status =~ /\d/) { return 0, ''; }
+
+#		# store and reload list of jobs
+#		$status = store_queue('queue');
+#		unless ($status) { return 'queue'; }
+#		$status = store_queue('pids');
+#		unless ($status) { return 'queue'; }
 
 # ???????? create exec check
 
@@ -394,7 +393,10 @@ print "00000\n";
 sub run_job {
 	my $name = shift;
 
-	run_background("$name.sh", "$name.log");
+	$name =~ s/\..*?$//;
+write_log($name);
+#	chmod_plus("$name.sh");
+write_log(run_background("$name.sh", "$name.log"));
 	chmod_minus("$name.sh");
 
 	return;
@@ -407,8 +409,8 @@ sub check_job {
 	$status = 0;
 	if ($pid) {
 		if (exists $queue{$pid}) { $status = 1; }
-		if (exists $pids{$pid}) { $status = 1; }
-		if (exists $done{$pid}) { $status = 1; }
+		elsif (exists $pids{$pid}) { $status = 1; }
+		elsif (exists $done{$pid}) { $status = 1; }
 		if ($status) { return 1, $config->{'messages'}->{'exists_job'}; }
 	}
 	else {
@@ -493,6 +495,14 @@ sub create_md5 {
 	$md5 = md5_hex($md5.time());
 
 	return $md5;
+}
+
+sub write_log {
+	my $data = shift;
+
+	open (FILE, ">>$config->{'log'}");
+		print FILE "$data\n";
+	close (FILE);
 }
 
 1;

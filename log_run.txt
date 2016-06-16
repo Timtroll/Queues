@@ -1,0 +1,32 @@
+/home/timofey/works/code/mojo/queue/output_dir/c9fabddd2c66b76962cae796c686f4d9/c9fabddd2c66b76962cae796c686f4d9.sh > /home/timofey/works/code/mojo/queue/output_dir/c9fabddd2c66b76962cae796c686f4d9/c9fabddd2c66b76962cae796c686f4d9.log &
+
+/home/timofey/works/code/mojo/queue/output_dir/0b07e58153b800432cebe3c096bb1e2f/0b07e58153b800432cebe3c096bb1e2f.sh > /home/timofey/works/code/mojo/queue/output_dir/0b07e58153b800432cebe3c096bb1e2f/0b07e58153b800432cebe3c096bb1e2f.log &
+
+/home/timofey/works/code/mojo/queue/output_dir/1f3d8c0c4ca7bc1679441d457f4181d7/1f3d8c0c4ca7bc1679441d457f4181d7.sh > /home/timofey/works/code/mojo/queue/output_dir/1f3d8c0c4ca7bc1679441d457f4181d7/1f3d8c0c4ca7bc1679441d457f4181d7.log &
+
+/home/timofey/works/code/mojo/queue/output_dir/d63e63c282576af2a6f3790b8d26b4ea/d63e63c282576af2a6f3790b8d26b4ea.sh > /home/timofey/works/code/mojo/queue/output_dir/d63e63c282576af2a6f3790b8d26b4ea/d63e63c282576af2a6f3790b8d26b4ea.log &
+
+.sh > .log &
+
+/home/timofey/works/code/mojo/queue/output_dir/930217437d294bccf73a252a1a3e5156/930217437d294bccf73a252a1a3e5156.sh > /home/timofey/works/code/mojo/queue/output_dir/930217437d294bccf73a252a1a3e5156/930217437d294bccf73a252a1a3e5156.log &
+
+/home/timofey/works/code/mojo/queue/output_dir/41e8ee008d2d94451dd3e0ce342d8c94/41e8ee008d2d94451dd3e0ce342d8c94.sh > /home/timofey/works/code/mojo/queue/output_dir/41e8ee008d2d94451dd3e0ce342d8c94/41e8ee008d2d94451dd3e0ce342d8c94.log &
+
+/home/timofey/works/code/mojo/queue/output_dir/0019a493d2a8383b35bc34e831603abc/0019a493d2a8383b35bc34e831603abc.sh > /home/timofey/works/code/mojo/queue/output_dir/0019a493d2a8383b35bc34e831603abc/0019a493d2a8383b35bc34e831603abc.log &
+
+/home/timofey/works/code/mojo/queue/output_dir/86b793a581682948151d18a9449f8dc6/86b793a581682948151d18a9449f8dc6.sh > /home/timofey/works/code/mojo/queue/output_dir/86b793a581682948151d18a9449f8dc6/86b793a581682948151d18a9449f8dc6.log &
+
+/home/timofey/works/code/mojo/queue/output_dir/de6263278f9ca761cb68a6ed450eae8e/de6263278f9ca761cb68a6ed450eae8e.sh > /home/timofey/works/code/mojo/queue/output_dir/de6263278f9ca761cb68a6ed450eae8e/de6263278f9ca761cb68a6ed450eae8e.log &
+
+.sh > .log &
+
+/home/timofey/works/code/mojo/queue/output_dir/58b54ff580aaae1306a1839988ecd989/58b54ff580aaae1306a1839988ecd989.sh > /home/timofey/works/code/mojo/queue/output_dir/58b54ff580aaae1306a1839988ecd989/58b54ff580aaae1306a1839988ecd989.log &
+
+.sh > .log &
+
+.sh > .log &
+
+.sh > .log &
+
+.sh > .log &
+

@@ -10,11 +10,11 @@
 
 
 % if ($pid) {
-%	if ($$queue{$pid}) {
+%	if (exists $$queue{$pid}) {
 	<li>Queue prepared to run: <%= $pid %></li>
-%	} elsif ($$pids{$pid}) {
+%	} elsif (exists $$pids{$pid}) {
 	<li>Running</li>
-%	} elsif ($$done{$pid}) {
+%	} elsif (exists $$done{$pid}) {
 	<li>Completed</li>
 %	}
 % }
@@ -26,5 +26,7 @@
 %	} else {
 	<li>Nothing</li>
 %	}
+% } else {
+%==	join("<br>", split("\n", $line));
 % }
 

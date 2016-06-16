@@ -13,12 +13,12 @@ sub index {
 	my ($self, %data);
 	$self = shift;
 
-#print "queue\n";
-#print Dumper(\%queue);
-#print "pids=\n";
-#print Dumper(\%pids);
-#print "done\n";
-#print Dumper(\%done);
+print "queue\n";
+print Dumper(\%queue);
+print "pids=\n";
+print Dumper(\%pids);
+print "done\n";
+print Dumper(\%done);
 
 	%data = (
 		queue	=> \%queue,
@@ -141,12 +141,12 @@ sub job_done {
 
 	# get all messages & remove process 
 	$pid = $self->param('pid');
-#print "queue\n";
-#print Dumper(\%queue);
-#print "pids\n";
-#print Dumper(\%pids);
-#print "done\n";
-#print Dumper(\%done);
+print "queue\n";
+print Dumper(\%queue);
+print "pids\n";
+print Dumper(\%pids);
+print "done\n";
+print Dumper(\%done);
 
 
 	if ($pid) {

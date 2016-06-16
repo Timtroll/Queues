@@ -13,9 +13,9 @@
 	<hr>
 <div id="container">
 	<div id="leftcol" align="left">
-		<div><b>Unexecuted list</b></div>
+		<div><b>Prepared list</b></div>
 %	if (scalar(keys %{$queue})) {
-%		foreach (sort {$a cmp $b} keys %{$queue}) {
+%		foreach (sort {$b cmp $a} keys %{$queue}) {
 		<li><%= substr($_, 0, 30) %>&nbsp;&nbsp;<a href="/killer?pid=<%= $_ %>">X</a></li>
 %		}
 %	} else {
@@ -25,7 +25,7 @@
 	<div id="rightcol" align="left">
 		<div><b>Еxecuted list</b></div>
 %	if (scalar(keys %{$done})) {
-%		foreach (sort {$a cmp $b} keys %{$done}) {
+%		foreach (sort {$b cmp $a} keys %{$done}) {
 		<li><a href="/status?pid=<%= $_ %>" target="_blank"><%= substr($_, 0, 30) %></a>&nbsp;&nbsp;<% if ($$done{$_}->{'killed'}) { %>Killed<% } %></li>
 %		}
 %	} else {
@@ -33,9 +33,9 @@
 % }
 	</div>
 	<div id="centercol" align="left">
-		<div><b>Running process</b></div>
+		<div><b>Running list</b></div>
 %	if (scalar(keys %{$pids})) {
-%		foreach (sort {$a cmp $b} keys %{$pids}) {
+%		foreach (sort {$b cmp $a} keys %{$pids}) {
 		<li><a href="/status?pid=<%= $_ %>" target="_blank"><%= substr($_, 0, 30) %></a>&nbsp;=&nbsp;<a href="/killer?pid=<%= $_ %>">X</a></li>
 %		}
 %	} else {

@@ -8,6 +8,7 @@ use Mojolicious::Plugin::Database;
 use Mojolicious::Plugin::Config;
 
 use common;
+use Data::Dumper;
 
 has [qw( db config messages queue pids done)];
 
@@ -26,7 +27,13 @@ sub startup {
 	$self->sessions->default_expiration(86400);
 
 	# load queues from storage if first start or restart application
-	$self->load_queues();
+	load_queues();
+#print "queue\n";
+#print Dumper(\%queue);
+#print "pids=\n";
+#print Dumper(\%pids);
+#print "done\n";
+#print Dumper(\%done);
 
 	# Session for auth
 	my $sessions = Mojolicious::Sessions->new;
