@@ -13,13 +13,6 @@ sub index {
 	my ($self, %data);
 	$self = shift;
 
-print "queue\n";
-print Dumper(\%queue);
-print "pids=\n";
-print Dumper(\%pids);
-print "done\n";
-print Dumper(\%done);
-
 	%data = (
 		queue	=> \%queue,
 		pids	=> \%pids,
@@ -34,6 +27,7 @@ sub job_add {
 	my ($self, $line, $job_num, $pid, $msg, $error, %data, %in);
 	$self = shift;
 
+write_log("\n\n\n=====job_add=====");
 	# Add tasks to your application
 	%in = (
 		'action'			=> 'put',
@@ -73,12 +67,7 @@ sub job_status {
 	my ($self, $pid, $line, $status, $msg, %data);
 	$self = shift;
 
-#print "queue\n";
-#print Dumper(\%queue);
-#print "pids\n";
-#print Dumper(\%pids);
-#print "done\n";
-#print Dumper(\%done);
+write_log("\n\n\n=====job_status=====");
 
 	# Get info from running tasks
 	$pid = $self->param('pid');
@@ -92,11 +81,7 @@ sub job_status {
 	}
 
 	# Render template "index/status.html.ep" with message
-	%data = (
-#		queue	=> \%queue, 
-#		pids	=> \%pids, 
-#		done	=> \%done,
- 
+	%data = ( 
 		title	=> "Information about pid=$pid",
 		pid		=> $pid,
 		line	=> $line,
@@ -109,12 +94,7 @@ sub job_kill {
 	my ($self, $pid, %data);
 	$self = shift;
 
-#print "queue\n";
-#print Dumper(\%queue);
-#print "pids\n";
-#print Dumper(\%pids);
-#print "done\n";
-#print Dumper(\%done);
+write_log("\n\n\n=====job_kill=====");
 
 	# kill exists process
 	$pid = $self->param('pid');
@@ -141,13 +121,7 @@ sub job_done {
 
 	# get all messages & remove process 
 	$pid = $self->param('pid');
-print "queue\n";
-print Dumper(\%queue);
-print "pids\n";
-print Dumper(\%pids);
-print "done\n";
-print Dumper(\%done);
-
+write_log("\n\n\n=====job_done=====-$pid-=");
 
 	if ($pid) {
 		if (exists $pids{$pid}) {

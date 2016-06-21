@@ -20,6 +20,7 @@ our @ISA = qw( Exporter );
 our @EXPORT = qw(
 	$config $messages %queue %pids %done 
 	&done_job &info_job &create_job &kill_job &get_pdf_res &load_queues &store_queues
+	&write_log
 );
 
 our ($config, $messages, %queue, %pids, %done);
@@ -34,21 +35,6 @@ BEGIN {
 		#'SSL_VERIFY_NONE'
 	);
 	$ENV{PERL_LWP_SSL_VERIFY_HOSTNAME} = '0';
-
-=comment
-print Dumper(\%queue);
-print Dumper(\%pids);
-print Dumper(\%done);
-	# load jobs from stored and run Pids-queue
-	if (scalar(keys %pids)) {
-		# Run jobs from Pids
-		my $limit = $config->{'limit'};
-		foreach (keys %pids) {
-			run_job($pids{$_}->{'log'});
-			$limit--;
-		}
-	}
-=cut
 };
 
 ############ queues ############
@@ -56,6 +42,12 @@ print Dumper(\%done);
 sub store_queues {
 	my ($type, $pid, $status);
 	($type, $pid) = @_;
+
+	write_log("Store queues $pid");
+
+	# wait while qeues are loading or moving & then create lock
+	while ($config->{'lock'}) {}
+	$config->{'lock'} = 'w';
 
 	if (scalar(keys %queue)) {
 		$status = store_queue('queue');
@@ -71,10 +63,21 @@ sub store_queues {
 		$status = store_queue('done');
 		unless ($status) { return 'done'; }
 	}
+
+	# unlock queues
+	$config->{'lock'} = 0;
+
+	write_log("End store queues $pid");
 }
 
 sub load_queues {
 	my ($status, @message);
+
+	write_log("Load queues");
+
+	# wait while qeues are storing or moving & then create lock
+	while ($config->{'lock'}) {}
+	$config->{'lock'} = 'l';
 
 	$status = load_queue('queue');
 	unless ($status) { push @message, $config-{'messages'}->{'can_not_open_queue'}."'queue'"; }
@@ -90,12 +93,19 @@ sub load_queues {
 		$messages = join("\n", @message);
 	}
 
+	# unlock queues
+	$config->{'lock'} = 0;
+
+	write_log("End load queues");
+
 	return $status, $messages;
 }
 
 sub load_queue {
 	my ($type, $link, $line, $json_xs, $val, $pid, $status);
 	$type = shift;
+
+	write_log("Load queue $type");
 
 	# when read all jobs from storage will be replaced exists keys and values
 	$status = 1;
@@ -123,12 +133,16 @@ sub load_queue {
 		unlink "$config->{'storage_dir'}/$type";
 	}
 
+	write_log("End load queue $type");
+
 	return $status;
 }
 
 sub store_queue {
 	my ($type, $link, $line, $cnt, $json_xs, $status);
 	$type = shift;
+
+	write_log("Store queue $type");
 
 	$status = 1;
 
@@ -150,9 +164,7 @@ sub store_queue {
 
 			open (FILE, ">$config->{'storage_dir'}/$type") or $status = 0;
 				map {
-					if ($type eq 'queue') { $line = $json_xs->encode($queue{$_}); }
-					elsif ($type eq 'pids') { $line = $json_xs->encode($pids{$_}); }
-					elsif ($type eq 'done') { $line = $json_xs->encode($done{$_}); }
+					$line = $json_xs->encode($$link{$_});
 					if ($cnt > 1) { $line .= "\n"; }
 					print FILE $line;
 					$cnt--;
@@ -161,11 +173,19 @@ sub store_queue {
 		}
 	}
 
+	write_log("End store queue $type");
+
 	return $status;
 }
 
 sub move_job {
 	my ($from_type, $to_type, $pid, $dir, $killed) = @_;
+
+	write_log("Move job pid='$pid' '$from_type' to '$to_type'");
+
+	# wait while qeues are loading or storing & then create lock
+	while ($config->{'lock'}) {}
+	$config->{'lock'} = 'm';
 
 	if ($from_type eq 'queue') {
 		if (exists $queue{$pid}) {
@@ -175,7 +195,13 @@ sub move_job {
 			# run moved job
 			run_job($pids{$pid}->{'log'});
 		}
-		else { return 0; }
+		else {
+			# unlock queues
+			$config->{'lock'} = 0;
+
+			write_log("End move job pid=$pid '$from_type' to '$to_type'");
+			return 0;
+		}
 	}
 	elsif ($from_type eq 'pids') {
 		if (exists $pids{$pid}) {
@@ -195,7 +221,13 @@ sub move_job {
 			$done{$pid} = $pids{$pid};
 			delete $pids{$pid};
 		}
-		else { return 0; }
+		else {
+			# unlock queues
+			$config->{'lock'} = 0;
+
+			write_log("End move job pid=$pid '$from_type' to '$to_type'");
+			return 0;
+		}
 	}
 	elsif ($from_type eq 'done') {
 		if (exists $done{$pid}) {
@@ -204,10 +236,26 @@ sub move_job {
 				$done{$pid}->{'killed'} = 1;
 			}
 		}
-		else { return 0; }
-	}
-	else { return 0; }
+		else {
+			# unlock queues
+			$config->{'lock'} = 0;
 
+			write_log("End move job pid=$pid '$from_type' to '$to_type'");
+			return 0;
+		}
+	}
+	else {
+		# unlock queues
+		$config->{'lock'} = 0;
+
+		write_log("End move job '$from_type' to '$to_type'");
+		return 0;
+	}
+
+	# unlock queues
+	$config->{'lock'} = 0;
+
+	write_log("End move job '$from_type' to '$to_type'");
 	return 1;
 }
 
@@ -215,12 +263,13 @@ sub done_job {
 	my ($line, $pid, $count, $dir, $status);
 	$pid = shift;
 
+	write_log("Done job pid=$pid");
+
 	# Check exists job & output data from them
 	if (exists $pids{$pid}) {
-print "$pid = $pids{$pid}\n";
 		# move pid to done hash
 		$status = move_job('pids', 'done', $pid);
-#		unless ($status) { return 0; }
+		unless ($status) { return 0; }
 
 		# check limit for running jobs and run prepared jobs
 		$count = $config->{'limit'} - scalar(keys %pids);
@@ -241,11 +290,16 @@ print "$pid = $pids{$pid}\n";
 
 		# store queues
 		$status = store_queues();
-		if ($status =~ /\d/) { return $status; }
+		if ($status =~ /\d/) {
+			write_log("End done job pid=$pid status = $status");
+			return $status;
+		}
 
+		write_log("End done job pid=$pid");
 		return 1;
 	}
 	else {
+		write_log("End done job pid=$pid");
 		return 0;
 	}
 }
@@ -254,31 +308,23 @@ sub info_job {
 	my ($line, $pid, $link, $status, $mess);
 	$pid = shift;
 
+	write_log("Info job $pid");
+
 	# Read list of job after reloading mode
 	($status, $mess) = load_queues();
 	unless ($status) { return $mess, 0; }
 
 	$line = '';
-	if (exists $queue{$pid}) { $line = $queue{$pid}->{'log'}; }
-	elsif (exists $pids{$pid}) { $line = $pids{$pid}->{'log'}; }
-	elsif (exists $done{$pid}) { $line = $done{$pid}->{'log'}; }
-	else { $line = undef; }
-
-	if ($link) {
-		# read log from current job
-		if (-e $link->{'log'}) {
-			$line = `cat $link->{'log'}`;
-		}
-		else { return $config->{'messages'}->{'not_exists_log'}, 0; }
-
-		return $line, 1;
-	}
-	elsif (-e "$config->{'output_dir'}/$pid/$pid.log") {
+	if (-e "$config->{'output_dir'}/$pid/$pid.log") {
 		$line = `cat $config->{'output_dir'}/$pid/$pid.log`;
+
+		write_log("End info job $pid");
 
 		return $line, 1;
 	}
 	else {
+		write_log("End info job $pid");
+
 		return '', 0;
 	}
 }
@@ -286,6 +332,8 @@ sub info_job {
 sub create_job {
 	my ($self, $cmd, $line, $job, $status, $error, $in, $tm, $dir);
 	($self, $job, $in) = @_;
+
+	write_log("Create job $job");
 
 	# set soure dir variable
 	unless ($$in{'source'}) {
@@ -321,71 +369,51 @@ sub create_job {
 	# check number of jobs
 	$dir = "$$in{'source'}/$$in{'md5'}";
 	$tm = gettimeofday();
-	if (scalar(keys %pids) >= $config->{'limit'}) {
-		# add job into queue which wait to exec
-		$queue{$$in{'md5'}} = {
-			'log' 	=> "$dir/$$in{'md5'}.log",
-			'killed'=> 0,
-			'time'	=> $tm,
-			'md5'	=> $$in{'md5'}
-		};
-	}
-	else {
-		# store name of new job md5 hash into job storage and path for output data
-		$pids{$$in{'md5'}} = {
-			'log' 	=> "$dir/$$in{'md5'}.log",
-			'killed'=> 0,
-			'time'	=> $tm,
-			'md5'	=> $$in{'md5'}
-		}
-	}
+
+	# add job into queue which wait to exec
+	$queue{$$in{'md5'}} = {
+		'log' 	=> "$dir/$$in{'md5'}.log",
+		'killed'=> 0,
+		'time'	=> $tm,
+		'md5'	=> $$in{'md5'}
+	};
 
 	# prepare command to run and write output into file in background 
 	makedir($dir);
 	echo_command($cmd, "$dir/$$in{'md5'}.sh");
 	chmod_plus("$dir/$$in{'md5'}.sh");
 
-	# run command and write output into file in background
-	run_job("$dir/$$in{'md5'}");
-
-print "$dir\n";
 	if (-d "$dir") {
 		# run command if exec limit is not exceeded
-print "$config->{'limit'} > ", scalar(keys %pids), "\n";
 		if ($config->{'limit'} > scalar(keys %pids)) {
 			# remove job from queue which wait to exec if exists
 			if (exists $queue{$$in{'md5'}}) {
-print "$dir\n";
-				# move pid to done hash
-				$status = move_job('queue', 'pids', $$in{'md5'});
-				unless ($status) { return 0, ''; }
-
 				# run command and write output into file in background
 				run_job($pids{$$in{'md5'}});
+
+				# move pid to done hash
+				$status = move_job('queue', 'pids', $$in{'md5'});
+				unless ($status) {
+					write_log("End create job $job. status = '$status'");
+					return 0, '';
+				}
 			}
 		}
 
 		# store queues
 		$status = store_queues();
-		unless ($status =~ /\d/) { return 0, ''; }
-
-#		# store and reload list of jobs
-#		$status = store_queue('queue');
-#		unless ($status) { return 'queue'; }
-#		$status = store_queue('pids');
-#		unless ($status) { return 'queue'; }
-
-# ???????? create exec check
-
-#	# Read list of job after reloading mode
-#	$status = load_queues();
-#	unless ($status) { return '', 0; }
+		unless ($status =~ /\d/) {
+			write_log("End create job $job. status = '$status'");
+			return 0, '';
+		}
 
 		# return name of the job
+		write_log("End create job $job");
 		return $$in{'md5'}, '';
 	}
 	else {
-print "00000\n";
+		write_log("End create job $job");
+
 		return 0, '';
 	}
 }
@@ -393,11 +421,15 @@ print "00000\n";
 sub run_job {
 	my $name = shift;
 
-	$name =~ s/\..*?$//;
-write_log($name);
-	chmod_plus("$name.sh");
-	run_background("$name.sh", "$name.log");
-	chmod_minus("$name.sh");
+	write_log("Run job $name");
+
+	if ($name) {
+		$name =~ s/\.\w+$//;
+		chmod_plus("$name.sh");
+		run_background("$name.sh", "$name.log");
+		chmod_minus("$name.sh");
+	}
+	write_log("End job $name");
 
 	return;
 }
@@ -442,7 +474,7 @@ sub kill_job {
 			# kill found pid job
 			kill_jobs($tmp[1]);
 			`pkill -TERM -P $tmp[1]`;
-		}  (@list);
+		} (@list);
 
 		# delete job from queue list
 		$status = 1;
@@ -500,9 +532,17 @@ sub create_md5 {
 sub write_log {
 	my $data = shift;
 
-	open (FILE, ">>$config->{'log'}");
-		print FILE "$data\n";
-	close (FILE);
+	if ($config->{'debug'}) {
+		$data = time() . ": $data";
+
+$data .= "\nQueue = ".scalar(keys %queue)."\n";
+$data .= "Pids = ".scalar(keys %pids)."\n";
+$data .= "Done = ".scalar(keys %done);
+
+		open (FILE, ">>$config->{'log'}");
+			print FILE "$data\n";
+		close (FILE);
+	}
 }
 
 1;

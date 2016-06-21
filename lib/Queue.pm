@@ -26,6 +26,14 @@ sub startup {
 
 	$self->sessions->default_expiration(86400);
 
+	# Clear log if debus status
+	if ($config->{'debug'}) {
+print "/dev/null > $config->{'log'}\n";
+		`/dev/null > $config->{'log'}`;
+	}
+
+	write_log("=====Start script=====");
+
 	# load queues from storage if first start or restart application
 	load_queues();
 #print "queue\n";
@@ -34,6 +42,9 @@ sub startup {
 #print Dumper(\%pids);
 #print "done\n";
 #print Dumper(\%done);
+
+	# Run queues if exists pids queue
+# ???????
 
 	# Session for auth
 	my $sessions = Mojolicious::Sessions->new;
