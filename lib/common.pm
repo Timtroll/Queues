@@ -173,7 +173,7 @@ sub move_job {
 			delete $queue{$pid};
 
 			# run moved job
-			run_job($queue{$pid}->{'log'});
+			run_job($pids{$pid}->{'log'});
 		}
 		else { return 0; }
 	}
@@ -395,8 +395,8 @@ sub run_job {
 
 	$name =~ s/\..*?$//;
 write_log($name);
-#	chmod_plus("$name.sh");
-write_log(run_background("$name.sh", "$name.log"));
+	chmod_plus("$name.sh");
+	run_background("$name.sh", "$name.log");
 	chmod_minus("$name.sh");
 
 	return;

@@ -93,9 +93,9 @@ sub job_status {
 
 	# Render template "index/status.html.ep" with message
 	%data = (
-		queue	=> \%queue, 
-		pids	=> \%pids, 
-		done	=> \%done,
+#		queue	=> \%queue, 
+#		pids	=> \%pids, 
+#		done	=> \%done,
  
 		title	=> "Information about pid=$pid",
 		pid		=> $pid,
