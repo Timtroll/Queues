@@ -40,10 +40,10 @@ BEGIN {
 ############ queues ############
 
 sub store_queues {
-	my ($type, $pid, $status);
-	($type, $pid) = @_;
+	my ($type, $status);
+	($type) = @_;
 
-	write_log("Store queues $pid");
+	write_log("Store queues");
 
 	# wait while qeues are loading or moving & then create lock
 	while ($config->{'lock'}) {}
@@ -67,7 +67,7 @@ sub store_queues {
 	# unlock queues
 	$config->{'lock'} = 0;
 
-	write_log("End store queues $pid");
+	write_log("End store queues");
 }
 
 sub load_queues {
@@ -364,7 +364,7 @@ sub create_job {
 	}
 
 	# add callback request
-	$cmd .= ";\ncurl http://queue/done?pid=$$in{'md5'};\n";
+	$cmd .= ";\ncurl $config->{'url'}/done?pid=$$in{'md5'};\n";
 
 	# check number of jobs
 	$dir = "$$in{'source'}/$$in{'md5'}";
