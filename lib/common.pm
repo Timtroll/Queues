@@ -43,7 +43,7 @@ sub store_queues {
 	my ($type, $status);
 	($type) = @_;
 
-	write_log("Store queues");
+	write_log("Store queues =$config->{'lock'}=");
 
 	# wait while qeues are loading or moving & then create lock
 	while ($config->{'lock'}) {}
@@ -51,23 +51,39 @@ sub store_queues {
 
 	if (scalar(keys %queue)) {
 		$status = store_queue('queue');
-		unless ($status) { return 'queue'; }
+		unless ($status) {
+			# unlock queues
+			$config->{'lock'} = 0;
+
+			return 'queue';
+		}
 	}
 
 	if (scalar(keys %pids)) {
 		$status = store_queue('pids');
-		unless ($status) { return 'pids'; }
+		unless ($status) {
+			# unlock queues
+			$config->{'lock'} = 0;
+
+			return 'pids';
+		}
 	}
 
 	if (scalar(keys %done)) {
 		$status = store_queue('done');
-		unless ($status) { return 'done'; }
+		unless ($status) {
+			# unlock queues
+			$config->{'lock'} = 0;
+
+			return 'done';
+		}
 	}
 
 	# unlock queues
 	$config->{'lock'} = 0;
 
 	write_log("End store queues");
+	return;
 }
 
 sub load_queues {
@@ -148,6 +164,7 @@ sub store_queue {
 
 	# check folder for queues
 	unless (-d $config->{storage_dir}) {
+print "-d $config->{storage_dir}\n";
 		return 2;
 	}
 	else {
@@ -156,7 +173,7 @@ sub store_queue {
 		elsif ($type eq 'pids') { $link = \%pids; }
 		elsif ($type eq 'done') { $link = \%done; }
 		else { return 3; }
-
+print "asdasd\n";
 		$cnt = scalar(keys %{$link});
 		if (($status == 1)&&($cnt)) {
 			$json_xs = JSON::XS->new();
@@ -179,7 +196,7 @@ sub store_queue {
 }
 
 sub move_job {
-	my ($from_type, $to_type, $pid, $dir, $killed) = @_;
+	my ($from_type, $to_type, $pid, $dir, $status, $killed) = @_;
 
 	write_log("Move job pid='$pid' '$from_type' to '$to_type'");
 
@@ -288,13 +305,6 @@ sub done_job {
 			}
 		}
 
-		# store queues
-		$status = store_queues();
-		if ($status =~ /\d/) {
-			write_log("End done job pid=$pid status = $status");
-			return $status;
-		}
-
 		write_log("End done job pid=$pid");
 		return 1;
 	}
@@ -381,40 +391,48 @@ sub create_job {
 	# prepare command to run and write output into file in background 
 	makedir($dir);
 	echo_command($cmd, "$dir/$$in{'md5'}.sh");
-	chmod_plus("$dir/$$in{'md5'}.sh");
 
 	if (-d "$dir") {
+print "1===";
 		# run command if exec limit is not exceeded
 		if ($config->{'limit'} > scalar(keys %pids)) {
+print "2===";
 			# remove job from queue which wait to exec if exists
 			if (exists $queue{$$in{'md5'}}) {
-				# run command and write output into file in background
-				run_job($pids{$$in{'md5'}});
-
+print "3===";
 				# move pid to done hash
 				$status = move_job('queue', 'pids', $$in{'md5'});
+print "4= =$status=";
 				unless ($status) {
-					write_log("End create job $job. status = '$status'");
+					write_log("End create job $$in{'md5'}. status = '$status'");
 					return 0, '';
 				}
-			}
-		}
 
-		# store queues
-		$status = store_queues();
-		unless ($status =~ /\d/) {
-			write_log("End create job $job. status = '$status'");
-			return 0, '';
+
+				# store queues
+				$status = store_queues();
+				unless ($status =~ /\d/) {
+					write_log("End create job $$in{'md5'}. status = '$status', Error store_queues");
+					return 0;
+				}
+
+				# run job if limit is not exceed
+#				if (exists $pids{$$in{'md5'}}) {
+#					# run command and write output into file in background
+#					run_job($pids{$$in{'md5'}});
+#				}
+			}
 		}
 
 		# return name of the job
 		write_log("End create job $job");
+print "5===";
 		return $$in{'md5'}, '';
 	}
 	else {
-		write_log("End create job $job");
+		write_log("End create job $job. Can not create dir for job");
 
-		return 0, '';
+		return 0, $config->{'messages'}->{'can_not_create_dir'};
 	}
 }
 
@@ -429,6 +447,7 @@ sub run_job {
 		run_background("$name.sh", "$name.log");
 		chmod_minus("$name.sh");
 	}
+
 	write_log("End job $name");
 
 	return;
@@ -458,7 +477,7 @@ sub kill_job {
 
 	if ($pids{$pid}) {
 		# find pids of all running jobs for current pid
-		ps_jobs($pid);
+		$list = ps_jobs($pid);
 
 		# get list of all running jobs for current pid
 		@list = split("\n", $list);
@@ -480,6 +499,10 @@ sub kill_job {
 		$status = 1;
 		if (exists $queue{$pid}) {
 			delete $queue{$pid};
+
+			# store queues statuses
+			$store = store_queues();
+			if ($store =~ /\d/) { return 0; }
 		}
 		elsif (exists $pids{$pid}) {
 			# move pid to done hash & write interupt message into job-log
@@ -490,12 +513,6 @@ sub kill_job {
 			# write interupt message into job-log
 			$status = move_job('done', 'done', $pid, 'killed');
 			unless ($status) { $status = 0; }
-		}
-
-		# store queues statuses
-		if ($status) {
-			$store = store_queues();
-			if ($store =~ /\d/) { return 0; }
 		}
 
 		return $status;

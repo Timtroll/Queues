@@ -14,14 +14,13 @@ our @EXPORT = qw(
 );
 
 sub run_background {
-	my ($file, $log, $line);
+	my ($file, $log);
 	$file = shift;
 	$log = shift;
 
-print "$file > $log \&\n";
-	$line = `$file > $log &`;
+	`$file > $log &`;
 
-	return $line;
+	return;
 }
 
 sub kill_jobs {
