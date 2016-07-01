@@ -36,6 +36,7 @@ print "/dev/null > $config->{'log'}\n";
 
 	# load queues from storage if first start or restart application
 	load_queues();
+
 #print "queue\n";
 #print Dumper(\%queue);
 #print "pids=\n";
