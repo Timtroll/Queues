@@ -46,7 +46,7 @@ write_log("\n\n\n=====job_add=====");
 
 	$msg = ' ';
 	if ($pid) {
-		$msg = $config->{'nessages'}->{'ran_success'} . $pid;
+		$msg = $config->{'messages'}->{'ran_success'} . $pid;
 	}
 	else {
 		$msg = $error;

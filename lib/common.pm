@@ -45,49 +45,68 @@ sub store_queues {
 
 	write_log("Store queues =$config->{'lock'}=");
 
-	# wait while qeues are loading or moving & then create lock
-#	while ($config->{'lock'}) {}
-#	$config->{'lock'} = 'w';
-
 	if (scalar(keys %queue)) {
 		$status = store_queue('queue');
-		unless ($status) {
-			# unlock queues
-#			$config->{'lock'} = 0;
-
-			return 'queue';
-		}
+		unless ($status) { return 'queue'; }
 	}
 
 	if (scalar(keys %pids)) {
 		$status = store_queue('pids');
-		unless ($status) {
-			# unlock queues
-#			$config->{'lock'} = 0;
-
-			return 'pids';
-		}
+		unless ($status) { return 'pids'; }
 	}
 
 	if (scalar(keys %done)) {
 		$status = store_queue('done');
-		unless ($status) {
-			# unlock queues
-#			$config->{'lock'} = 0;
+		unless ($status) { return 'done'; }
+	}
 
-			return 'done';
+	write_log("End store queues");
+	return 0;
+}
+
+sub store_queue {
+	my ($type, $link, $line, $cnt, $json_xs, $status);
+	$type = shift;
+
+	write_log("Store queue $type");
+
+	$status = 1;
+
+	# check folder for queues
+	unless (-d $config->{storage_dir}) {
+print "-d $config->{storage_dir}\n";
+		return 2;
+	}
+	else {
+		# create link to queue which are store (queue pids done)
+		if ($type eq 'queue') { $link = \%queue; }
+		elsif ($type eq 'pids') { $link = \%pids; }
+		elsif ($type eq 'done') { $link = \%done; }
+		else { return 3; }
+print "asdasd\n";
+		$cnt = scalar(keys %{$link});
+		if (($status == 1) && ($cnt)) {
+			$json_xs = JSON::XS->new();
+			$json_xs->utf8(1);
+
+			open (FILE, ">$config->{'storage_dir'}/$type") or $status = 0;
+				map {
+					$line = $json_xs->encode($$link{$_});
+					if ($cnt > 1) { $line .= "\n"; }
+					print FILE $line;
+					$cnt--;
+				} (keys %{$link});
+			close (FILE) or $status = 0;
 		}
 	}
 
-	# unlock queues
-#	$config->{'lock'} = 0;
+	write_log("End store queue $type");
 
-	write_log("End store queues");
-	return;
+	return $status;
 }
 
 sub load_queues {
-	my ($status, @message);
+	my ($status, $messages, @message);
 
 	write_log("Load queues");
 
@@ -105,6 +124,7 @@ sub load_queues {
 	unless ($status) { push @message, $config-{'messages'}->{'can_not_open_queue'}."'done'"; }
 
 	# create error messages
+	$messages = '';
 	if (scalar(@message)) {
 		$messages = join("\n", @message);
 	}
@@ -154,49 +174,9 @@ sub load_queue {
 	return $status;
 }
 
-sub store_queue {
-	my ($type, $link, $line, $cnt, $json_xs, $status);
-	$type = shift;
-
-	write_log("Store queue $type");
-
-	$status = 1;
-
-	# check folder for queues
-	unless (-d $config->{storage_dir}) {
-print "-d $config->{storage_dir}\n";
-		return 2;
-	}
-	else {
-		# create link to queue which are store (queue pids done)
-		if ($type eq 'queue') { $link = \%queue; }
-		elsif ($type eq 'pids') { $link = \%pids; }
-		elsif ($type eq 'done') { $link = \%done; }
-		else { return 3; }
-print "asdasd\n";
-		$cnt = scalar(keys %{$link});
-		if (($status == 1)&&($cnt)) {
-			$json_xs = JSON::XS->new();
-			$json_xs->utf8(1);
-
-			open (FILE, ">$config->{'storage_dir'}/$type") or $status = 0;
-				map {
-					$line = $json_xs->encode($$link{$_});
-					if ($cnt > 1) { $line .= "\n"; }
-					print FILE $line;
-					$cnt--;
-				} (keys %{$link});
-			close (FILE) or $status = 0;
-		}
-	}
-
-	write_log("End store queue $type");
-
-	return $status;
-}
-
 sub move_job {
-	my ($from_type, $to_type, $pid, $dir, $status, $killed) = @_;
+	my ($from_type, $to_type, $pid, $status, $killed);
+	($from_type, $to_type, $pid, $killed) = @_;
 
 	write_log("Move job pid='$pid' '$from_type' to '$to_type'");
 
@@ -204,7 +184,45 @@ sub move_job {
 	while ($config->{'lock'}) {}
 	$config->{'lock'} = 'm';
 
-	if ($from_type eq 'queue') {
+	if ($from_type eq 'delete') {
+# ??????????
+	}
+	elsif ($from_type eq 'new') {
+		if (ref($pid) ne 'HASH') {
+			# unlock queues
+			$config->{'lock'} = 0;
+
+			write_log("End move new job '$from_type' to '$to_type' pid=$pid is not a HASH");
+			return 0;
+		}
+		else {
+			unless ($$pid{'md5'}) {
+				# unlock queues
+				$config->{'lock'} = 0;
+
+				write_log("End move new job '$from_type' to '$to_type' md5 is not exists");
+				return 0;
+			}
+		}
+
+		if ($to_type eq 'queue') {
+			$queue{$$pid{'md5'}} = $pid;
+		}
+		elsif ($to_type eq 'pids') {
+			$pids{$$pid{'md5'}} = $pid;
+
+			# run moved job
+			run_job($pids{$$pid{'md5'}}->{'log'});
+		}
+		else {
+			# unlock queues
+			$config->{'lock'} = 0;
+
+			write_log("End move new job '$from_type' to '$to_type' unknown to_queue");
+			return 0;
+		}
+	}
+	elsif ($from_type eq 'queue') {
 		if (exists $queue{$pid}) {
 			$pids{$pid} = $queue{$pid};
 			delete $queue{$pid};
@@ -290,8 +308,13 @@ sub done_job {
 	my ($line, $pid, $count, $dir, $status);
 	$pid = shift;
 
+	unless ($pid) {
+		write_log("Done job pid not set");
+		return 0;
+	}
 	write_log("Done job pid=$pid");
 
+print "done $pid\n";
 	# Check exists job & output data from them
 	if (exists $pids{$pid}) {
 		# move pid to done hash
@@ -330,10 +353,6 @@ sub info_job {
 
 	write_log("Info job $pid");
 
-	# Read list of job after reloading mode
-#	($status, $mess) = load_queues();
-#	unless ($status) { return $mess, 0; }
-
 	$line = '';
 	if (-e "$config->{'output_dir'}/$pid/$pid.log") {
 		$line = `cat $config->{'output_dir'}/$pid/$pid.log`;
@@ -355,7 +374,9 @@ sub create_job {
 
 	write_log("Create job $job");
 
+print Dumper($in);
 	# set soure dir variable
+# ????????
 	unless ($$in{'source'}) {
 		$$in{'source'} = $config->{'output_dir'};
 	}
@@ -386,7 +407,8 @@ sub create_job {
 		$cmd = $job;
 	}
 
-	# add callback request
+	# check job add add callback request if exists
+	unless ($cmd) { return 0, $error; }
 	$cmd .= ";\ncurl $config->{'url'}/done?pid=$$in{'md5'};\n";
 
 	# prepare dir for job
@@ -409,12 +431,12 @@ print "3===";
 				# add job into queue which wait to exec
 				unless ($queue{$$in{'md5'}}) {
 					$tm = gettimeofday();
-					$new_pid{$$in{'md5'}} = {
+					%new_pid = (
 						'log' 	=> "$dir/$$in{'md5'}.log",
 						'killed'=> 0,
 						'time'	=> $tm,
 						'md5'	=> $$in{'md5'}
-					};
+					);
 
 					# add pid into pids hash
 					$status = move_job('new', 'pids', \%new_pid);
@@ -422,9 +444,6 @@ print "3===";
 						write_log("Can not add new job into pids $$in{'md5'}. status = '$status'");
 						return 0, 'Can not add new job into pids';
 					}
-
-					# run command and write output into file in background
-					run_job($pids{$$in{'md5'}});
 				}
 				else {
 					# move pid to pids hash
@@ -444,12 +463,12 @@ print "4= =$status=";
 		else {
 			# add job into queue which wait to exec
 			$tm = gettimeofday();
-			$new_pid{$$in{'md5'}} = {
+			%new_pid = (
 				'log' 	=> "$dir/$$in{'md5'}.log",
 				'killed'=> 0,
 				'time'	=> $tm,
 				'md5'	=> $$in{'md5'}
-			};
+			);
 
 			# add pid into queue hash
 			$status = move_job('new', 'queue', \%new_pid);
@@ -501,9 +520,9 @@ sub check_job {
 
 	$status = 0;
 	if ($pid) {
-		if (exists $queue{$pid}) { $status = 1; }
-		elsif (exists $pids{$pid}) { $status = 1; }
-		elsif (exists $done{$pid}) { $status = 1; }
+		if (ref($queue{$pid}) eq 'HASH') { $status = 1; }
+		elsif (ref($pids{$pid}) eq 'HASH') { $status = 1; }
+		elsif (ref($done{$pid}) eq 'HASH') { $status = 1; }
 		if ($status) { return 1, $config->{'messages'}->{'exists_job'}; }
 	}
 	else {
@@ -530,20 +549,22 @@ sub kill_job {
 			@tmp = ();
 			s/\s+/ /goi;
 			@tmp = split(" ", $_);
-			$tmp[1] =~ /\D/goi;
 
 			# kill found pid job
-			kill_jobs($tmp[1]);
-			`pkill -TERM -P $tmp[1]`;
+			if ($tmp[1]) {
+				$tmp[1] =~ /\D/goi;
+				kill_jobs($tmp[1]);
+				`pkill -TERM -P $tmp[1]`;
+			}
 		} (@list);
 
 		# delete job from queues list
 		$status = 1;
 		if (exists $queue{$pid}) {
 			# move pid from queue hash
-			$status = move_job('queue', 'done', $$in{'md5'});
+			$status = move_job('queue', 'done', $pid);
 			unless ($status) {
-				write_log("Can not move job from queue $$in{'md5'} into done. status = '$status'");
+				write_log("Can not move job from queue $pid into done. status = '$status'");
 				return 0, 'Can not move job from queue into done';
 			}
 		}
@@ -571,7 +592,6 @@ sub create_md5 {
 	my ($in, $md5);
 	$in = shift;
 
-	$md5 = '';
 	map {
 		if (ref($$in{$_}) ne 'HASH') {
 			if ($$in{$_}) {
@@ -583,8 +603,8 @@ sub create_md5 {
 				}
 			}
 		}
-	} (keys %{$in});
-	$md5 = md5_hex($md5);
+	} (sort {$a cmp $b} keys %{$in});
+	$md5 = md5_hex($md5.time);
 
 	return $md5;
 }
