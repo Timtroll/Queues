@@ -10,24 +10,30 @@ use common;
 use Data::Dumper;
 
 sub index {
-	my ($self, %data);
+	my ($self, $preset, $msg, %data);
 	$self = shift;
 
+	# get list of preset jobs
+	($preset, $msg) = list_of_preset();
+	unless ($msg) { $msg = ' '; }
+
 	%data = (
+		preset	=> $preset,
 		queue	=> \%queue,
 		pids	=> \%pids,
 		done	=> \%done,
 		title	=> 'Main page',
-		msg		=> ' '
+		msg		=> $msg
 	);
 	$self->render('index/index', %data);
 }
 
 sub job_add {
-	my ($self, $line, $job_num, $pid, $msg, $error, %data, %in);
+	my ($self, $line, $job_num, $pid, $msg, $mess, $preset, $error, %data, %in);
 	$self = shift;
 
-write_log("\n\n\n=====job_add=====");
+	write_log("\n\n\n=====job_add=====");
+
 	# Add tasks to your application
 	%in = (
 		'action'			=> 'put',
@@ -52,8 +58,13 @@ write_log("\n\n\n=====job_add=====");
 		$msg = $error;
 	}
 
+	# get list of preset jobs
+	($preset, $mess) = list_of_preset();
+	if ($mess) { $msg .= "<br>$mess"; }
+
 	# Render list of jobs template "index/test.html.ep"
 	%data = (
+		preset	=> $preset,
 		queue	=> \%queue,
 		pids	=> \%pids,
 		done	=> \%done,
@@ -91,7 +102,7 @@ write_log("\n\n\n=====job_status=====");
 }
 
 sub job_kill {
-	my ($self, $pid, %data);
+	my ($self, $pid, $mess, $msg, $preset, %data);
 	$self = shift;
 
 write_log("\n\n\n=====job_kill=====");
@@ -99,18 +110,24 @@ write_log("\n\n\n=====job_kill=====");
 	# kill exists process
 	$pid = $self->param('pid');
 	if ($pid) {
-		if (exists $pids{$pid}) {
+		if (ref($pids{$pid}) eq 'HASH') {
 			# kill process
 			kill_job($pid);
 		}
 	}
 
+	# get list of preset jobs
+	$mess = "<br> Killed job pid = $pid";
+	($preset, $msg) = list_of_preset();
+	if ($msg) { $msg .= $mess; }
+
 	%data = (
+		preset	=> $preset,
 		queue	=> \%queue,
 		pids	=> \%pids,
 		done	=> \%done,
 		title	=> "Killed job",
-		msg		=> "Killed job pid = $pid"
+		msg		=> $mess
 	);
 	$self->render('index/index', %data);
 }
@@ -124,7 +141,7 @@ sub job_done {
 write_log("\n\n\n=====job_done=====-$pid-=");
 
 	if ($pid) {
-		if (exists $pids{$pid}) {
+		if (ref($pids{$pid}) eq 'HASH') {
 			# get all messages & remove process 
 			$status = done_job($pid);
 

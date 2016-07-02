@@ -1,16 +1,42 @@
+body {
+	font-family: sans-serif;
+	font-size: 13px;
+}
+li {
+	list-style-type: none;
+	padding: 2px;
+}
+li:nth-child(odd) {
+	background: #eaeaea;
+}
+a {
+	font-size: 13px;
+	font-family: sans-serif;
+}
+input {
+	width: 80%;
+}
+
 #container {
-	width: 900px; /* Ширина макета */
-	margin: 0 auto; /* Выравнивание по центру */
+	width: 1024px; /* Width container */
+	margin: 0 auto; /* center align */
+}
+#listcol {
+	width: 200px; /* Width left colunm */
+	float: left;
+	vertical-align: top;
 }
 #leftcol {
-	width: 300px; /* Ширина левой колонки */
+	width: 275px; /* Width left colunm */
 	float: left;
 	vertical-align: top;
 }
 #rightcol {
-	width: 300px; /* Ширина правой колонки */
+	width: 275px; /* Width right colunm */
 	float: right;
+	vertical-align: top;
 }
 #centercol {
-	margin: 0 300px 0 300px; /* Отступ на ширину левой и правой колонки*/
+	margin: 0 275px 0 475px; /* padding left and right */
+	vertical-align: top;
 }

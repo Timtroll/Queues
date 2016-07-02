@@ -19,7 +19,7 @@ use libbash;
 our @ISA = qw( Exporter );
 our @EXPORT = qw(
 	$config $messages %queue %pids %done 
-	&done_job &info_job &create_job &kill_job &get_pdf_res &load_queues &store_queues
+	&done_job &info_job &create_job &kill_job &get_pdf_res &load_queues &store_queues &list_of_preset
 	&write_log
 );
 
@@ -43,22 +43,25 @@ sub store_queues {
 	my ($type, $status);
 	($type) = @_;
 
-	write_log("Store queues =$config->{'lock'}=");
+	write_log("Store queues");
 
 	if (scalar(keys %queue)) {
 		$status = store_queue('queue');
 		unless ($status) { return 'queue'; }
 	}
+	else { unlink ("$config->{'storage_dir'}/queue"); }
 
 	if (scalar(keys %pids)) {
 		$status = store_queue('pids');
 		unless ($status) { return 'pids'; }
 	}
+	else { unlink ("$config->{'storage_dir'}/pids"); }
 
 	if (scalar(keys %done)) {
 		$status = store_queue('done');
 		unless ($status) { return 'done'; }
 	}
+	else { unlink ("$config->{'storage_dir'}/done"); }
 
 	write_log("End store queues");
 	return 0;
@@ -74,8 +77,9 @@ sub store_queue {
 
 	# check folder for queues
 	unless (-d $config->{storage_dir}) {
-print "-d $config->{storage_dir}\n";
-		return 2;
+		write_log("End store queue '$type'. $config->{'messages'}->{'not_exists_queues_dir'}");
+
+		return 0;
 	}
 	else {
 		# create link to queue which are store (queue pids done)
@@ -83,17 +87,21 @@ print "-d $config->{storage_dir}\n";
 		elsif ($type eq 'pids') { $link = \%pids; }
 		elsif ($type eq 'done') { $link = \%done; }
 		else { return 3; }
-print "asdasd\n";
+
 		$cnt = scalar(keys %{$link});
 		if (($status == 1) && ($cnt)) {
 			$json_xs = JSON::XS->new();
 			$json_xs->utf8(1);
 
+			$line = '';
 			open (FILE, ">$config->{'storage_dir'}/$type") or $status = 0;
 				map {
 					$line = $json_xs->encode($$link{$_});
-					if ($cnt > 1) { $line .= "\n"; }
-					print FILE $line;
+					if ($line) {
+						if ($cnt > 1) { $line .= "\n"; }
+						print FILE $line;
+						$line = '';
+					}
 					$cnt--;
 				} (keys %{$link});
 			close (FILE) or $status = 0;
@@ -156,11 +164,12 @@ sub load_queue {
 					$val = $json_xs->decode($line);
 
 					# check key and value
-					if (exists $val->{'md5'}) {
+					if ($val->{'md5'}) {
 						if ($type eq 'queue') { $queue{$val->{'md5'}} = { %{$val} }; }
 						elsif ($type eq 'pids') { $pids{$val->{'md5'}} = { %{$val} }; }
 						elsif ($type eq 'done') { $done{$val->{'md5'}} = { %{$val} }; }
 					}
+					$val = '';
 				}
 			};
 		close (FILE) or $status = 0;
@@ -184,6 +193,7 @@ sub move_job {
 	while ($config->{'lock'}) {}
 	$config->{'lock'} = 'm';
 
+	# add/delete queues
 	if ($from_type eq 'delete') {
 # ??????????
 	}
@@ -222,8 +232,9 @@ sub move_job {
 			return 0;
 		}
 	}
+	# moving queues
 	elsif ($from_type eq 'queue') {
-		if (exists $queue{$pid}) {
+		if (ref($queue{$pid}) eq 'HASH') {
 			$pids{$pid} = $queue{$pid};
 			delete $queue{$pid};
 
@@ -239,7 +250,7 @@ sub move_job {
 		}
 	}
 	elsif ($from_type eq 'pids') {
-		if (exists $pids{$pid}) {
+		if (ref($pids{$pid}) eq 'HASH') {
 			# delete olderst element from done queue if exceed done-limit
 			if (scalar(keys %done) > $config->{'limit_show_done'}) {
 				foreach (sort {$done{$a}->{'time'} <=> $done{$b}->{'time'}} keys %done) {
@@ -248,12 +259,12 @@ sub move_job {
 				}
 			}
 
+			$done{$pid} = $pids{$pid};
+
 			# set status 'killed' if job was kill
 			if ($killed) {
-				$pids{$pid}->{'killed'} = 1;
+				$done{$pid}->{'killed'} = 1;
 			}
-
-			$done{$pid} = $pids{$pid};
 			delete $pids{$pid};
 		}
 		else {
@@ -265,7 +276,7 @@ sub move_job {
 		}
 	}
 	elsif ($from_type eq 'done') {
-		if (exists $done{$pid}) {
+		if (ref($done{$pid}) eq 'HASH') {
 			# set status 'killed' if job was kill
 			if ($killed) {		
 				$done{$pid}->{'killed'} = 1;
@@ -314,9 +325,8 @@ sub done_job {
 	}
 	write_log("Done job pid=$pid");
 
-print "done $pid\n";
 	# Check exists job & output data from them
-	if (exists $pids{$pid}) {
+	if (ref($pids{$pid}) eq 'HASH') {
 		# move pid to done hash
 		$status = move_job('pids', 'done', $pid);
 		unless ($status) { return 0; }
@@ -374,7 +384,6 @@ sub create_job {
 
 	write_log("Create job $job");
 
-print Dumper($in);
 	# set soure dir variable
 # ????????
 	unless ($$in{'source'}) {
@@ -395,9 +404,9 @@ print Dumper($in);
 	if ($status) { return 0, $error; }
 
 	# check template for job & create exec from template if exists
-	if (-e "$config->{'home_dir'}/layouts/$job") {
+	if (-e "$config->{'templates_dir'}/$job") {
 		$cmd = $self->render_to_string(	
-			"layouts/$job",
+			"$config->{'templates_jobs'}/$job",
 			format	=> 'txt',
 			config	=> $config,
 			in		=> $in
@@ -497,6 +506,78 @@ print "5===";
 	}
 }
 
+sub kill_job {
+	my ($pid, $list, $status, $store, @list, @tmp);
+	$pid = shift;
+
+	# find pids of all running jobs for current pid
+	$list = ps_jobs($pid);
+
+	# get list of all running jobs for current pid
+	@list = split("\n", $list);
+
+	# kill all running jobs for current pid
+	map {
+		# find pid
+		@tmp = ();
+		s/\s+/ /goi;
+		@tmp = split(" ", $_);
+
+		# kill found pid job
+		if ($tmp[1]) {
+			$tmp[1] =~ /\D/goi;
+			kill_jobs($tmp[1]);
+			`pkill -TERM -P $tmp[1]`;
+		}
+	} (@list);
+
+	# delete job from queues list
+	$status = 1;
+	if (ref($queue{$pid}) eq 'HASH') {
+		# move pid from queue hash
+		$status = move_job('queue', 'done', $pid);
+		unless ($status) {
+			write_log("Can not move job from queue $pid into done. status = '$status'");
+			return 0, 'Can not move job from queue into done';
+		}
+	}
+	elsif (ref($pids{$pid}) eq 'HASH') {
+		# move pid to done hash & write interupt message into job-log
+		$status = move_job('pids', 'done', $pid, 'killed');
+		unless ($status) {
+			write_log("Can not move job from pids $pid into done. status = '$status'");
+			$status = 0;
+		}
+	}
+	elsif (ref($done{$pid}) eq 'HASH') {
+		# write interupt message into job-log
+		$status = move_job('done', 'done', $pid, 'killed');
+		unless ($status) { $status = 0; }
+	}
+
+	return $status;
+}
+
+sub list_of_preset {
+	my ($f, $mess, @list);
+
+	@list = ();
+	$mess = '';
+	if (-d "$config->{'templates_dir'}") {
+		opendir(DIR, "$config->{'templates_dir'}") or $mess = "Can't open directory $config->{'templates_dir'}: $!\n";
+			while ($f = readdir(DIR)) {
+				unless ($f =~ /^\./) {
+					$f =~ s/\.txt\.ep//;
+					push @list, $f;
+				}
+			}
+		closedir(DIR) or $mess = "Can't close directory $config->{'templates_dir'}: $!\n";
+	}
+
+	return \@list, $mess;
+}
+
+############ Subs ############
 sub run_job {
 	my $name = shift;
 
@@ -531,62 +612,6 @@ sub check_job {
 
 	return 0, '';
 }
-
-sub kill_job {
-	my ($pid, $list, $status, $store, @list, @tmp);
-	$pid = shift;
-
-#	if ($pids{$pid}) {
-		# find pids of all running jobs for current pid
-		$list = ps_jobs($pid);
-
-		# get list of all running jobs for current pid
-		@list = split("\n", $list);
-
-		# kill all running jobs for current pid
-		map {
-			# find pid
-			@tmp = ();
-			s/\s+/ /goi;
-			@tmp = split(" ", $_);
-
-			# kill found pid job
-			if ($tmp[1]) {
-				$tmp[1] =~ /\D/goi;
-				kill_jobs($tmp[1]);
-				`pkill -TERM -P $tmp[1]`;
-			}
-		} (@list);
-
-		# delete job from queues list
-		$status = 1;
-		if (exists $queue{$pid}) {
-			# move pid from queue hash
-			$status = move_job('queue', 'done', $pid);
-			unless ($status) {
-				write_log("Can not move job from queue $pid into done. status = '$status'");
-				return 0, 'Can not move job from queue into done';
-			}
-		}
-		elsif (exists $pids{$pid}) {
-			# move pid to done hash & write interupt message into job-log
-			$status = move_job('pids', 'done', $pid, 'killed');
-			unless ($status) { $status = 0; }
-		}
-		elsif (exists $done{$pid}) {
-			# write interupt message into job-log
-			$status = move_job('done', 'done', $pid, 'killed');
-			unless ($status) { $status = 0; }
-		}
-
-		return $status;
-#	}
-#	else {
-#		return 0;
-#	}
-}
-
-############ Subs ############
 
 sub create_md5 {
 	my ($in, $md5);

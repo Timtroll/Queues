@@ -1,5 +1,6 @@
 % layout 'default', title => $title;
 
+<div id="container">
 <h2><a href="/"><%= $title %></a></h2>
 % if ($msg) {
 <span style="color:red;"><%= $msg %></span><br>
@@ -11,36 +12,50 @@
 	</form>
 
 	<hr>
-<div id="container">
+
+	<div id="listcol" align="left">
+		<div><b>Job templates</b></div>
+%	if (scalar(@{$preset})) {
+%		foreach (sort {$a cmp $b} @{$preset}) {
+		<li><a href="/addjob?preset=<%= $_ %>"><%= $_ %></a></li>
+%		}
+%	} else {
+		<li>Nothing</li>
+%	}
+	</div>
+
 	<div id="leftcol" align="left">
 		<div><b>Prepared list</b></div>
 %	if (scalar(keys %{$queue})) {
-%		foreach (sort {$b cmp $a} keys %{$queue}) {
-		<li><%= substr($_, 0, 30) %>&nbsp;&nbsp;<a href="/killer?pid=<%= $_ %>">X</a></li>
+%		foreach (sort {$$queue{$b}->{'time'} <=> $$queue{$a}->{'time'}} keys %{$queue}) {
+		<li><%= $_ %>&nbsp;&nbsp;<a href="/killer?pid=<%= $_ %>">X</a></li>
 %		}
 %	} else {
-	<li>Nothing</li>
-% }
+		<li>Nothing</li>
+%	}
 	</div>
+
 	<div id="rightcol" align="left">
 		<div><b>Еxecuted list</b></div>
 %	if (scalar(keys %{$done})) {
-%		foreach (sort {$b cmp $a} keys %{$done}) {
-		<li><a href="/status?pid=<%= $_ %>" target="_blank"><%= substr($_, 0, 30) %></a>&nbsp;&nbsp;<% if ($$done{$_}->{'killed'}) { %>Killed<% } %></li>
+%		foreach (sort {$$done{$b}->{'time'} <=> $$done{$a}->{'time'}} keys %{$done}) {
+		<li><a href="/status?pid=<%= $_ %>" target="_blank"><%= $_ %></a>&nbsp;&nbsp;<% if (ref($$done{$_}->{'killed'})) { %>Killed<% } %></li>
 %		}
 %	} else {
-	<li>Nothing</li>
-% }
+		<li>Nothing</li>
+%	}
 	</div>
+
 	<div id="centercol" align="left">
 		<div><b>Running list</b></div>
 %	if (scalar(keys %{$pids})) {
-%		foreach (sort {$b cmp $a} keys %{$pids}) {
-		<li><a href="/status?pid=<%= $_ %>" target="_blank"><%= substr($_, 0, 30) %></a>&nbsp;=&nbsp;<a href="/killer?pid=<%= $_ %>">X</a></li>
+%		foreach (sort {$$pids{$b}->{'time'} <=> $$pids{$a}->{'time'}} keys %{$pids}) {
+		<li><a href="/status?pid=<%= $_ %>" target="_blank"><%= $_ %></a>&nbsp;=&nbsp;<a href="/killer?pid=<%= $_ %>">X</a></li>
 %		}
 %	} else {
-	<li>Nothing</li>
+		<li>Nothing</li>
 % }
 	</div>
+
 </div>
 

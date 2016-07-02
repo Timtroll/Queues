@@ -28,7 +28,6 @@ sub startup {
 
 	# Clear log if debus status
 	if ($config->{'debug'}) {
-print "/dev/null > $config->{'log'}\n";
 		`/dev/null > $config->{'log'}`;
 	}
 
@@ -36,13 +35,6 @@ print "/dev/null > $config->{'log'}\n";
 
 	# load queues from storage if first start or restart application
 	load_queues();
-
-#print "queue\n";
-#print Dumper(\%queue);
-#print "pids=\n";
-#print Dumper(\%pids);
-#print "done\n";
-#print Dumper(\%done);
 
 	# Run queues if exists pids queue
 # ???????
