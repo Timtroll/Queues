@@ -29,7 +29,7 @@ sub index {
 }
 
 sub job_add {
-	my ($self, $line, $job_num, $pid, $msg, $mess, $preset, $error, %data, %in);
+	my ($self, $line, $job, $tmp, $pid, $msg, $mess, $preset, $error, %data, %in);
 	$self = shift;
 
 	write_log("\n\n\n=====job_add=====");
@@ -37,9 +37,7 @@ sub job_add {
 	# Add tasks to your application
 	%in = (
 		'action'			=> 'put',
-		'conversion_type'	=> $self->param('conversion_type'),
-		'source'			=> '',
-		'output'			=> '',
+		'output'			=> $config->{'output_dir'},
 		'quality'			=> 100,
 		'resolution'		=> 72,
 		'password'			=> 'textpass',
@@ -48,14 +46,31 @@ sub job_add {
 			'height'	=> 2000
 		}
 	);
-	($pid, $error) = $self->create_job($in{'conversion_type'}, \%in);
+	if ($self->param('conversion_type')) {
+		# set soure/output dir variable
+		$in{'conversion_type'} = $tmp = $self->param('conversion_type');
+print "$tmp\n";
+print "$config->{'templates_dir'}/$in{'conversion_type'}.txt.ep\n";
+		if (-e "$config->{'templates_dir'}/$in{'conversion_type'}.txt.ep") {
+			$tmp =~ s/\d.*$//;
+print "$tmp\n";
+			$in{'source'} = "$config->{'source_dir'}/$in{'conversion_type'}.$tmp";
+		}
+print "$in{'source'}\n";
+	}
+	if ($in{'conversion_type'}) {
+		($pid, $error) = $self->create_job($in{'conversion_type'}, \%in);
 
-	$msg = ' ';
-	if ($pid) {
-		$msg = $config->{'messages'}->{'ran_success'} . $pid;
+		$msg = ' ';
+		if ($pid) {
+			$msg = $config->{'messages'}->{'ran_success'} . $pid;
+		}
+		else {
+			$msg = $error;
+		}
 	}
 	else {
-		$msg = $error;
+		$msg = $config->{'messages'}->{'empty_job'};
 	}
 
 	# get list of preset jobs

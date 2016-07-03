@@ -43,7 +43,7 @@ sub store_queues {
 	my ($type, $status);
 	($type) = @_;
 
-	write_log("Store queues");
+	write_log("Store queues lock=$config->{'lock'}");
 
 	if (scalar(keys %queue)) {
 		$status = store_queue('queue');
@@ -379,22 +379,18 @@ sub info_job {
 }
 
 sub create_job {
-	my ($self, $cmd, $line, $job, $status, $error, $in, $tm, $dir, %new_pid);
+	my ($self, $cmd, $tmp, $job, $status, $error, $in, $tm, $dir, %new_pid);
 	($self, $job, $in) = @_;
 
 	write_log("Create job $job");
 
-	# set soure dir variable
-# ????????
-	unless ($$in{'source'}) {
-		$$in{'source'} = $config->{'output_dir'};
-	}
+	# set soure/output dir variable
+	unless ($$in{'source'}) { $$in{'source'} = $config->{'source_dir'}; }
+	unless ($$in{'output'}) { $$in{'output'} = $config->{'output_dir'}; }
 
 	# set up md5 hash for indentify current job
 	$$in{'md5'} = create_md5($in);
-	unless ($$in{'md5'}) {
-		return 0, '';
-	}
+	unless ($$in{'md5'}) { return 0, ''; }
 
 	# init new pid for adding
 	%new_pid =();
@@ -404,12 +400,16 @@ sub create_job {
 	if ($status) { return 0, $error; }
 
 	# check template for job & create exec from template if exists
-	if (-e "$config->{'templates_dir'}/$job") {
+	if (-e "$config->{'templates_dir'}/$job.txt.ep") {
 		$cmd = $self->render_to_string(	
 			"$config->{'templates_jobs'}/$job",
-			format	=> 'txt',
-			config	=> $config,
-			in		=> $in
+			format		=> 'txt',
+			in			=> $in,
+			icm_profile	=> $config->{'icm_profile'},
+			icc_profile	=> $config->{'icc_profile'},
+			tmp_dir		=> $config->{'tmp_dir'},
+			config		=> $config,
+			%{$config->{'exec_apps'}}
 		);
 	}
 	else {
@@ -420,8 +420,11 @@ sub create_job {
 	unless ($cmd) { return 0, $error; }
 	$cmd .= ";\ncurl $config->{'url'}/done?pid=$$in{'md5'};\n";
 
+	# delete empty lines
+	$cmd =~ s/\;(\n|\r)+\;/\;\n/goi;
+
 	# prepare dir for job
-	$dir = "$$in{'source'}/$$in{'md5'}";
+	$dir = "$$in{'output'}/$$in{'md5'}";
 
 	# prepare directory for new job
 	makedir($dir);
@@ -430,13 +433,10 @@ sub create_job {
 		# prepare command to run and write output into file in background 
 		echo_command($cmd, "$dir/$$in{'md5'}.sh");
 
-print "1===";
 		# run command if exec limit is not exceeded
 		if ($config->{'limit'} > scalar(keys %pids)) {
-print "2===";
 			# remove job from queue which wait to exec if exists
 			if (-e "$dir/$$in{'md5'}.sh") {
-print "3===";
 				# add job into queue which wait to exec
 				unless ($queue{$$in{'md5'}}) {
 					$tm = gettimeofday();
@@ -462,7 +462,6 @@ print "3===";
 						return 0, '';
 					}
 				}
-print "4= =$status=";
 			}
 			else {
 				write_log($config->{'messages'}->{'can_not_create_job'}."$dir/$$in{'md5'}.sh");
@@ -489,7 +488,7 @@ print "4= =$status=";
 
 		# return name of the job
 		write_log("End create job $job");
-print "5===";
+
 		return $$in{'md5'}, '';
 	}
 	else {
@@ -639,10 +638,6 @@ sub write_log {
 
 	if ($config->{'debug'}) {
 		$data = time() . ": $data";
-
-$data .= "\nQueue = ".scalar(keys %queue)."\n";
-$data .= "Pids = ".scalar(keys %pids)."\n";
-$data .= "Done = ".scalar(keys %done);
 
 		open (FILE, ">>$config->{'log'}");
 			print FILE "$data\n";

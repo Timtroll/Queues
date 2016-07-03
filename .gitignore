@@ -1,4 +1,6 @@
 /storage
 /output_dir
+/source_dir
 /tmp
 *log*
+*.old

@@ -17,7 +17,7 @@
 		<div><b>Job templates</b></div>
 %	if (scalar(@{$preset})) {
 %		foreach (sort {$a cmp $b} @{$preset}) {
-		<li><a href="/addjob?preset=<%= $_ %>"><%= $_ %></a></li>
+		<li><a href="/addjob?conversion_type=<%= $_ %>"><%= $_ %></a></li>
 %		}
 %	} else {
 		<li>Nothing</li>
