@@ -319,6 +319,9 @@ sub done_job {
 	my ($line, $pid, $count, $dir, $status);
 	$pid = shift;
 
+	# check load balance & correct limit of jobs
+	load_balancer();
+
 	unless ($pid) {
 		write_log("Done job pid not set");
 		return 0;
@@ -577,6 +580,31 @@ sub list_of_preset {
 }
 
 ############ Subs ############
+sub load_balancer {
+	my ($cpu, $load, $ld, $mem);
+
+	$cpu = `lscpu`; # cat /proc/cpuinfo | grep 'cpu cores'
+	$cpu =~ /CPU\(s\)\:(.*?)(\d+)(\n|\r)/;
+print "-$2-\n";
+
+	$load = `w`;
+	$load =~ /average\:(.*?)(\n|\r)/;
+	$load = $1;
+	print "$load\n";
+	$load =~ s/\s+//goi;
+	$ld = 0;
+	map {
+		$ld += $_;
+	} split(',', $load);
+	$ld = $ld/3;
+print "$ld\n";
+
+	$mem = `free -m`;
+	$mem =~ /Mem\:\s+(\d+)\s+(\d+)\s+(\d+).*?(\n|\r)/;
+print "$1 -> $3 Mb\n";
+
+}
+
 sub run_job {
 	my $name = shift;
 
