@@ -583,6 +583,8 @@ sub list_of_preset {
 sub load_balancer {
 	my ($cpu, $load, $ld, $mem);
 
+	# change jobs limit based on CPU/Mem/Load average
+
 	$cpu = `lscpu`; # cat /proc/cpuinfo | grep 'cpu cores'
 	$cpu =~ /CPU\(s\)\:(.*?)(\d+)(\n|\r)/;
 print "-$2-\n";
