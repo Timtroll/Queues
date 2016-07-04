@@ -1,7 +1,17 @@
 % layout 'default', title => $title;
 
 <div id="container">
-<h2><a href="/"><%= $title %></a></h2>
+<div>
+	<div>
+		<h2><a href="/"><%= $title %></a></h2>
+	</div>
+	<div>
+		Limit = <%= $config->{'limit'} %>
+	</div>
+	<div>IO</div>
+	<div>Memory</div>
+	<div>Load average</div>
+</div>
 % if ($msg) {
 <span style="color:red;"><%= $msg %></span><br>
 % }
@@ -50,7 +60,7 @@
 		<div><b>Running list</b></div>
 %	if (scalar(keys %{$pids})) {
 %		foreach (sort {$$pids{$b}->{'time'} <=> $$pids{$a}->{'time'}} keys %{$pids}) {
-		<li><a href="/status?pid=<%= $_ %>" target="_blank"><%= $_ %></a>&nbsp;=&nbsp;<a href="/killer?pid=<%= $_ %>">X</a></li>
+		<li><a href="/status?pid=<%= $_ %>" target="_blank"><%= $_ %></a>&nbsp;&nbsp;<a href="/killer?pid=<%= $_ %>">X</a></li>
 %		}
 %	} else {
 		<li>Nothing</li>

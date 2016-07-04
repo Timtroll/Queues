@@ -319,9 +319,6 @@ sub done_job {
 	my ($line, $pid, $count, $dir, $status);
 	$pid = shift;
 
-	# check load balance & correct limit of jobs
-	load_balancer();
-
 	unless ($pid) {
 		write_log("Done job pid not set");
 		return 0;
@@ -367,8 +364,8 @@ sub info_job {
 	write_log("Info job $pid");
 
 	$line = '';
-	if (-e "$config->{'output_dir'}/$pid/$pid.log") {
-		$line = `cat $config->{'output_dir'}/$pid/$pid.log`;
+	if (-e "$config->{'exec_apps'}->{'output_dir'}/$pid/$pid.log") {
+		$line = `cat $config->{'exec_apps'}->{'output_dir'}/$pid/$pid.log`;
 
 		write_log("End info job $pid");
 
@@ -387,16 +384,16 @@ sub create_job {
 
 	write_log("Create job $job");
 
+	# check load balance & correct limit of jobs
+	load_balancer();
+
 	# set soure/output dir variable
-	unless ($$in{'source'}) { $$in{'source'} = $config->{'source_dir'}; }
-	unless ($$in{'output'}) { $$in{'output'} = $config->{'output_dir'}; }
+	unless ($$in{'source'}) { $$in{'source'} = $config->{'exec_apps'}->{'source_dir'}; }
+	unless ($$in{'output'}) { $$in{'output'} = $config->{'exec_apps'}->{'output_dir'}; }
 
 	# set up md5 hash for indentify current job
 	$$in{'md5'} = create_md5($in);
 	unless ($$in{'md5'}) { return 0, ''; }
-
-	# init new pid for adding
-	%new_pid =();
 
 	# check exists job and return if exists
 	($status, $error) = check_job($$in{'md5'});
@@ -408,10 +405,6 @@ sub create_job {
 			"$config->{'templates_jobs'}/$job",
 			format		=> 'txt',
 			in			=> $in,
-			icm_profile	=> $config->{'icm_profile'},
-			icc_profile	=> $config->{'icc_profile'},
-			tmp_dir		=> $config->{'tmp_dir'},
-			config		=> $config,
 			%{$config->{'exec_apps'}}
 		);
 	}
@@ -425,6 +418,9 @@ sub create_job {
 
 	# delete empty lines
 	$cmd =~ s/\;(\n|\r)+\;/\;\n/goi;
+
+	# init new pid for adding
+	%new_pid =();
 
 	# prepare dir for job
 	$dir = "$$in{'output'}/$$in{'md5'}";
@@ -581,46 +577,59 @@ sub list_of_preset {
 
 ############ Subs ############
 sub load_balancer {
-	my ($cpu, $load, $ld, $mem, $io, $flag, $tmp, $out, %out);
+	my ($flag, $tmp, %out);
 
-	# change jobs limit based on CPU/Mem/Load average
-
-
+	# how many kernels
 	$out{'cpu'} = `lscpu`; # cat /proc/cpuinfo | grep 'cpu cores'
 	$out{'cpu'} =~ /CPU\(s\)\:(.*?)(\d+)(\n|\r)/;
 	$out{'cpu'} = $2;
-print "-$out{'cpu'}-\n";
 
-	$load = `w`;
-	$load =~ /average\:(.*?)(\n|\r)/;
-	$load = $1;
-	print "$load\n";
-	$load =~ s/\s+//goi;
-	$ld = 0;
+	# how load average (percents)
+	$out{'load'} = `w`;
+	$out{'load'} =~ /average\:(.*?)(\n|\r)/;
+	$out{'load'} = $1;
+	$out{'load'} =~ s/\s+//goi;
+	$tmp = 0;
 	map {
-		$ld += $_;
-	} split(',', $load);
-	$ld = $ld/3;
-print "$ld\n";
+		$tmp += $_;
+	} split(',', $out{'load'});
+	$out{'load'} = int(($tmp*100/3)/$out{'cpu'});
 
-	$mem = `free -m`;
-	$mem =~ /Mem\:\s+(\d+)\s+(\d+)\s+(\d+).*?(\n|\r)/;
-print "$1 -> $3 Mb\n";
+	# how free memory (percents)
+	$out{'free_mem'} = `free -m`;
+	$out{'free_mem'} =~ /Mem\:\s+(\d+)\s+(\d+)\s+(\d+).*?(\n|\r)/;
+	# $1 - total memory
+	# $3 - free memory
+	$out{'free_mem'} = int($3/($1/100));
 
-	$io = `iostat -m -x`;
-	$flag = $out = 0;
+	# how read/write average (percents)
+	$out{'io_tmp'} = `iostat -m -x`;
+	$out{'io_tmp'} =~ s/.*util(\n|\r)//;
+	$tmp = $out{'io'} = 0;
 	map {
-		if ($flag) {
-			/.*(\d+)\,\d+$/;
-			if ($1) {
-				$tmp = $1;
-				if (!$out || $out < $tmp) { $out = $tmp; }
+		/^\w+.*?\s+(\d+)\.\d+$/;
+		if ($1) {
+			$tmp = $1;
+			if ($tmp =~ /\d+/) {
+				if (!$out{'io'} || $out{'io'} < $tmp) {
+					$out{'io'} = $tmp;
+				}
 			}
 		}
-		if (/Device/) { $flag++; }
-	} (split('(\n|\r)', $io));
-	print "$out %\n";
+	} (split("(\n|\r)", $out{'io_tmp'}));
+	delete $out{'io_tmp'};
 
+	# change jobs limit based on hdd-IO/Mem/Load average
+print "$config->{'load'} < $out{'load'} && $config->{'free_mem'} < $out{'free_mem'} && $config->{'io'} < $out{'io'} && $config->{'limit'} == ";
+print scalar(keys %pids);
+print "\n";
+	if ($config->{'load'} < $out{'load'} && $config->{'free_mem'} < $out{'free_mem'} && $config->{'io'} < $out{'io'} && $config->{'limit'} == scalar(keys %pids)) {
+		if ($config->{'limit'} > 0) { $config->{'limit'}--; }
+	}
+	else {
+# ??????????????
+		$config->{'limit'}++;
+	}
 }
 
 sub run_job {

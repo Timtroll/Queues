@@ -26,6 +26,7 @@ sub index {
 		pids	=> \%pids,
 		done	=> \%done,
 		title	=> 'Main page',
+		config	=> $config,
 		msg		=> $msg
 	);
 	$self->render('index/index', %data);
@@ -40,7 +41,7 @@ sub job_add {
 	# Add tasks to your application
 	%in = (
 		'action'			=> 'put',
-		'output'			=> $config->{'output_dir'},
+		'output'			=> $config->{'exec_apps'}->{'output_dir'},
 		'quality'			=> 100,
 		'resolution'		=> 72,
 		'password'			=> 'textpass',
@@ -57,7 +58,7 @@ print "$config->{'templates_dir'}/$in{'conversion_type'}.txt.ep\n";
 		if (-e "$config->{'templates_dir'}/$in{'conversion_type'}.txt.ep") {
 			$tmp =~ s/\d.*$//;
 print "$tmp\n";
-			$in{'source'} = "$config->{'source_dir'}/$in{'conversion_type'}.$tmp";
+			$in{'source'} = "$config->{'exec_apps'}->{'source_dir'}/$in{'conversion_type'}.$tmp";
 		}
 print "$in{'source'}\n";
 	}
