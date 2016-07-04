@@ -19,7 +19,7 @@ use libbash;
 our @ISA = qw( Exporter );
 our @EXPORT = qw(
 	$config $messages %queue %pids %done 
-	&done_job &info_job &create_job &kill_job &get_pdf_res &load_queues &store_queues &list_of_preset
+	&done_job &info_job &create_job &kill_job &get_pdf_res &load_queues &store_queues &list_of_preset &load_balancer
 	&write_log
 );
 
@@ -581,13 +581,15 @@ sub list_of_preset {
 
 ############ Subs ############
 sub load_balancer {
-	my ($cpu, $load, $ld, $mem);
+	my ($cpu, $load, $ld, $mem, $io, $flag, $tmp, $out, %out);
 
 	# change jobs limit based on CPU/Mem/Load average
 
-	$cpu = `lscpu`; # cat /proc/cpuinfo | grep 'cpu cores'
-	$cpu =~ /CPU\(s\)\:(.*?)(\d+)(\n|\r)/;
-print "-$2-\n";
+
+	$out{'cpu'} = `lscpu`; # cat /proc/cpuinfo | grep 'cpu cores'
+	$out{'cpu'} =~ /CPU\(s\)\:(.*?)(\d+)(\n|\r)/;
+	$out{'cpu'} = $2;
+print "-$out{'cpu'}-\n";
 
 	$load = `w`;
 	$load =~ /average\:(.*?)(\n|\r)/;
@@ -604,6 +606,20 @@ print "$ld\n";
 	$mem = `free -m`;
 	$mem =~ /Mem\:\s+(\d+)\s+(\d+)\s+(\d+).*?(\n|\r)/;
 print "$1 -> $3 Mb\n";
+
+	$io = `iostat -m -x`;
+	$flag = $out = 0;
+	map {
+		if ($flag) {
+			/.*(\d+)\,\d+$/;
+			if ($1) {
+				$tmp = $1;
+				if (!$out || $out < $tmp) { $out = $tmp; }
+			}
+		}
+		if (/Device/) { $flag++; }
+	} (split('(\n|\r)', $io));
+	print "$out %\n";
 
 }
 

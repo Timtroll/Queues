@@ -10,17 +10,38 @@ rm -v <%= $$in{'output'}.'/'.$$in{'md5'} %>/doc_data.txt;
 echo "----- start for";
 for i in `ls <%= $$in{'output'}.'/'.$$in{'md5'} %>/*[0-9].pdf`;
 do
-	echo "----- convert pdf->swf";
-	<%= $pdf2swf %> -T 9 -w $i -O1 $i -o <%= $$in{'output'}.'/'.$$in{'md5'} %>/<%= $$in{'md5'} %>.swf;
+
+	filename=${i%.*};
+#	echo "----- convert pdf->swf";
+#	<%= $pdf2swf %> -Q 200 -T 9 --flatten $i -O1 "$filename.swf";
 
 	echo "----- convert pdf->jpg";
-	<%= $gs %> -dSAFER -dBATCH -dNOPAUSE -sDEVICE=jpeg -r160 -sOutputFile=<%= $$in{'output'}.'/'.$$in{'md5'} %>/<%= $$in{'md5'} %>.jpg $i;
+	<%= $gs %> -dSAFER -dBATCH -dNOPAUSE -sDEVICE=jpeg -r160 -sOutputFile="$filename.jpg" $i;
+
+	echo "----- convert jpg->swf";
+#	if ! [ -f "$filename.jpg" ];
+#		then
+			<%= $jpeg2swf %> -T 9 -v "$filename.jpg" -o "$filename.swf";
+#		else
+#			echo "----- does not exists $filename.jpg";
+#	fi
 
 	echo "----- resize jpg into <%= $$in{'size_sum'} %>";
-	<%= $convert %> -verbose <% if ($$in{'size_sum'}) { %>-size <%= $$in{'size_sum'} %><% } %> <%= $$in{'output'}.'/'.$$in{'md5'} %>/<%= $$in{'md5'} %>.jpg <%= $tmp_dir %>/resize_<%= $$in{'md5'} %>.jpg;
+#	if ! [ -f "$filename.jpg" ];
+#		then
+			<%= $convert %> -verbose <% if ($$in{'size_sum'}) { %>-size <%= $$in{'size_sum'} %><% } %> "$filename.jpg" "$filename-resize.jpg";
+#		else
+#			echo "----- does not exists $filename.jpg";
+#	fi
 
 	echo "----- move resize jpg into result dir";
-	mv <%= $config->{'tmp_dir'} %>/resize_<%= $$in{'md5'} %>.jpg <%= $$in{'output'}.'/'.$$in{'md5'} %>/<%= $$in{'md5'} %>.jpg;
+#	if ! [ -f "$filename-resize.jpg" ];
+#		then
+			mv "$filename-resize.jpg" "$filename.jpg";
+#		else
+#			echo "----- does not exists $filename-resize.jpg";
+#	fi
+
 done;
 echo "----- End pdf2jpg";
 

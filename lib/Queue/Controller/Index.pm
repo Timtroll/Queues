@@ -10,14 +10,17 @@ use common;
 use Data::Dumper;
 
 sub index {
-	my ($self, $preset, $msg, %data);
+	my ($self, $preset, $msg, $load, %data);
 	$self = shift;
 
 	# get list of preset jobs
 	($preset, $msg) = list_of_preset();
 	unless ($msg) { $msg = ' '; }
 
+	$load = load_balancer();
+
 	%data = (
+		load	=> $load,
 		preset	=> $preset,
 		queue	=> \%queue,
 		pids	=> \%pids,

@@ -1,0 +1,47 @@
+#!/bin/bash
+
+echo "----- Start pdf2png";
+echo "----- split pdf";
+<%= $pdftk %> <%= $$in{'source'} %> burst output <%= $$in{'output'}.'/'.$$in{'md5'} %>/<%= $$in{'md5'} %>.%04d.pdf verbose;
+
+echo "----- remove doc_data.txt";
+rm -v <%= $$in{'output'}.'/'.$$in{'md5'} %>/doc_data.txt;
+
+echo "----- start for";
+for i in `ls <%= $$in{'output'}.'/'.$$in{'md5'} %>/*[0-9].pdf`;
+do
+
+	filename=${i%.*};
+#	echo "----- convert pdf->swf";
+#	<%= $pdf2swf %> -Q 200 -T 9 --flatten $i -O1 "$filename.swf";
+
+	echo "----- convert pdf->png";
+	<%= $gs %> -dSAFER -dBATCH -dNOPAUSE -sDEVICE=pngalpha -r160 -sOutputFile="$filename.png" $i;
+
+	echo "----- convert png->swf";
+#	if ! [ -f "$filename.png" ];
+#		then
+			<%= $png2swf %> -T 9 -z -v "$filename.png" -o "$filename.swf";
+#		else
+#			echo "----- does not exists $filename.png";
+#	fi
+
+	echo "----- resize png into <%= $$in{'size_sum'} %>";
+#	if ! [ -f "$filename.png" ];
+#		then
+			<%= $convert %> -verbose <% if ($$in{'size_sum'}) { %>-size <%= $$in{'size_sum'} %><% } %> "$filename.png" "$filename-resize.png";
+#		else
+#			echo "----- does not exists $filename.png";
+#	fi
+
+	echo "----- move resize png into result dir";
+#	if ! [ -f "$filename-resize.png" ];
+#		then
+			mv "$filename-resize.png" "$filename.png";
+#		else
+#			echo "----- does not exists $filename-resize.png";
+#	fi
+
+done;
+echo "----- End pdf2png";
+
