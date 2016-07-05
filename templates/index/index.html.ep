@@ -1,9 +1,11 @@
 % layout 'default', title => $title;
 
 <div id="container">
-	<div>
+	<div class="block">
 		<div class="menu">
-			<a href="/"><%= $title %></a>
+			<span class="title">
+				<a href="/" class="title">Home</a> <% if ($title) { %>/ <%= $title %><% } %>
+			</span>
 		</div>
 		<div class="load">
 			IO
@@ -37,18 +39,31 @@
 		</div>
 	</div>
 % if ($msg) {
-	<span style="color:red;"><%= $msg %></span><br>
+	<div class="block">
+		<span style="color:red;"><%= $msg %></span>
+	</div>
 % }
 
-	<form action="/addjob" method="post">
-		<input type="text" placeholder="ping google.com" name="conversion_type" value="<% if ($self->param('conversion_type')) { %><%= $self->param('conversion_type') %><% } %>">
-		<button type="submit">Add</button>
-	</form>
+	<div class="block">
+		<div class="form_com">
+			<form action="/addjob" method="post">
+				<input type="text" placeholder="example: ping google.com" name="conversion_type" value="<% if ($self->param('conversion_type')) { %><%= $self->param('conversion_type') %><% } %>">
+				<button type="submit">Command line</button>
+			</form>
+		</div>
+
+		<div class="form_search">
+			<form action="/searchjob" method="post">
+				<input type="text" placeholder="insert md5 key here" name="pid" value="<% if ($self->param('conversion_type')) { %><%= $self->param('conversion_type') %><% } %>">
+				<button type="submit">Find</button>
+			</form>
+		</div>
+	</div>
 
 	<hr>
 
 	<div id="listcol" align="left">
-		<div><b>Job templates</b></div>
+		<div class="head"><b>Job templates</b></div>
 %	if (scalar(@{$preset})) {
 %		foreach (sort {$a cmp $b} @{$preset}) {
 		<li><a href="/addjob?conversion_type=<%= $_ %>"><%= $_ %></a></li>
@@ -59,7 +74,9 @@
 	</div>
 
 	<div id="leftcol" align="left">
-		<div><b>Prepared list</b></div>
+		<div class="head">
+			<b>Prepared list</b>
+		</div>
 %	if (scalar(keys %{$queue})) {
 %		foreach (sort {$$queue{$b}->{'time'} <=> $$queue{$a}->{'time'}} keys %{$queue}) {
 		<li><%= $_ %>&nbsp;&nbsp;<a href="/killer?pid=<%= $_ %>">X</a></li>
@@ -70,12 +87,14 @@
 	</div>
 
 	<div id="rightcol" align="left">
-		<div><b>Еxecuted list</b></div>
+		<div class="head">
+			<b>Еxecuted list</b><div class="form_search"><a href="/alljobs">All jobs</a></div>
+		</div>
 %	if (scalar(keys %{$done})) {
 %		my $cnt = 0;
 %		foreach (sort {$$done{$b}->{'time'} <=> $$done{$a}->{'time'}} keys %{$done}) {
 %			if ($cnt <= $config->{'limit_show_done'}) {
-		<li><a href="/status?pid=<%= $_ %>" target="_blank"><%= $_ %></a>&nbsp;&nbsp;<% if (ref($$done{$_}->{'killed'})) { %>Killed<% } %></li>
+		<li><a href="/status?pid=<%= $_ %>"><%= $_ %></a>&nbsp;&nbsp;<% if (ref($$done{$_}->{'killed'})) { %>Killed<% } %></li>
 %				if ($cnt == $config->{'limit_show_done'}) { last; }
 %			}
 %			$cnt++;
@@ -86,10 +105,12 @@
 	</div>
 
 	<div id="centercol" align="left">
-		<div><b>Running list</b></div>
+		<div class="head">
+			<b>Running list</b>
+		</div>
 %	if (scalar(keys %{$pids})) {
 %		foreach (sort {$$pids{$b}->{'time'} <=> $$pids{$a}->{'time'}} keys %{$pids}) {
-		<li><a href="/status?pid=<%= $_ %>" target="_blank"><%= $_ %></a>&nbsp;&nbsp;<a href="/killer?pid=<%= $_ %>">X</a></li>
+		<li><a href="/status?pid=<%= $_ %>"><%= $_ %></a>&nbsp;&nbsp;<a href="/killer?pid=<%= $_ %>">X</a></li>
 %		}
 %	} else {
 		<li>Nothing</li>

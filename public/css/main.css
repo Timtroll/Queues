@@ -17,8 +17,27 @@ input {
 	width: 80%;
 }
 
+.title {
+	font-size: 13px;
+	font-family: sans-serif;
+}
+.form_com {
+	 width:70%;
+	 float:left;
+}
+.form_search {
+	 width:30%;
+	 float:right;
+}
+.block {
+	width:100%;
+	min-height: 30px;
+}
+.head {
+	min-height: 25px;
+}
 .menu {
-	width: 200px; /* Width right colunm */
+	width: 500px; /* Width right colunm */
 	float: left;
 	vertical-align: top;
 	height: 18px;

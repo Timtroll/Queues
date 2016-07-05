@@ -35,14 +35,12 @@
 
 	<hr>
 
-% unless ($msg) {
-%	if ($line) {
-%==		join("<br>", split("\n", $line));
-%	} else {
-	<li>Nothing</li>
+% if (scalar(@{$jobs})) {
+%	foreach (@{$jobs}) {
+	<li><a href="/status?pid=<%= $_ %>"><%= $_ %></a></li>
 %	}
 % } else {
-%==	join("<br>", split("\n", $line));
+	<li>Nothing</li>
 % }
 
 </div>

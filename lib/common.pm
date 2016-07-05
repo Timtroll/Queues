@@ -19,7 +19,7 @@ use libbash;
 our @ISA = qw( Exporter );
 our @EXPORT = qw(
 	$config $messages %queue %pids %done 
-	&done_job &info_job &create_job &kill_job &get_pdf_res &load_queues &store_queues &list_of_preset &load_balancer
+	&jobs_list &done_job &info_job &create_job &kill_job &get_pdf_res &load_queues &store_queues &list_of_preset &load_balancer
 	&write_log
 );
 
@@ -561,8 +561,8 @@ sub list_of_preset {
 
 	@list = ();
 	$mess = '';
-	if (-d "$config->{'templates_dir'}") {
-		opendir(DIR, "$config->{'templates_dir'}") or $mess = "Can't open directory $config->{'templates_dir'}: $!\n";
+	if (-d $config->{'templates_dir'}) {
+		opendir(DIR, $config->{'templates_dir'}) or $mess = "Can't open directory $config->{'templates_dir'}: $!\n";
 			while ($f = readdir(DIR)) {
 				unless ($f =~ /^\./) {
 					$f =~ s/\.txt\.ep//;
@@ -570,6 +570,26 @@ sub list_of_preset {
 				}
 			}
 		closedir(DIR) or $mess = "Can't close directory $config->{'templates_dir'}: $!\n";
+	}
+
+	return \@list, $mess;
+}
+
+sub jobs_list {
+	my ($f, @list, $mess);
+
+	# read output dir
+	if (-d $config->{'exec_apps'}->{'output_dir'}) {
+		opendir(DIR, $config->{'exec_apps'}->{'output_dir'}) or $mess = "Can't open directory $config->{'exec_apps'}->{'output_dir'}: $!\n";
+			while ($f = readdir(DIR)) {
+				unless ($f =~ /^\./) {
+print "$f\n";
+					if (-d "$config->{'exec_apps'}->{'output_dir'}/$f") {
+						push @list, $f;
+					}
+				}
+			}
+		closedir(DIR) or $mess = "Can't close directory $config->{'exec_apps'}->{'output_dir'}: $!\n";
 	}
 
 	return \@list, $mess;
@@ -593,7 +613,9 @@ sub load_balancer {
 	map {
 		s/\,/\./goi;
 		s/(\.|\,)$//;
-		$tmp += $_;
+		if ($_) {
+			$tmp += $_;
+		}
 	} split('\s', $out{'load'});
 	$out{'load'} = int(($tmp*100/$out{'cpu'}));
 
@@ -622,8 +644,8 @@ sub load_balancer {
 	delete $out{'io_tmp'};
 
 	# change jobs limit based on hdd-IO/Mem/Load average
-	if ($config->{'load'} < $out{'load'} && $config->{'free_mem'} < $out{'free_mem'} && $config->{'io'} < $out{'io'} && scalar(keys %pids <= $config->{'limit'})) {
-		if ($config->{'limit'} > 0) { $config->{'limit'}--; }
+	if (($config->{'load'} < $out{'load'} || $config->{'free_mem'} < $out{'free_mem'} || $config->{'io'} < $out{'io'}) && scalar(keys %pids <= $config->{'limit'})) {
+		if ($config->{'limit'} > 1) { $config->{'limit'}--; }
 	}
 	else {
 		if ($config->{'limit'} < $config->{'limit_runung_max'}) {

@@ -66,6 +66,9 @@ sub startup {
 	$r->any('/killer')			->to('index#job_kill');
 	$r->any('/done')			->to('index#job_done');
 
+	$r->any('/alljobs')			->to('index#jobs_all');
+	$r->any('/searchjob')		->to('index#job_search');
+
 #	$r->any('/logout')			->to('auth#logout');
 #	my $auth = $r->under()		->to('auth#login');
 

@@ -13,6 +13,8 @@ sub index {
 	my ($self, $preset, $msg, $load, %data);
 	$self = shift;
 
+	write_log("\n\n\n=====index=====");
+
 	# get list of preset jobs
 	($preset, $msg) = list_of_preset();
 	unless ($msg) { $msg = ' '; }
@@ -30,6 +32,50 @@ sub index {
 		msg		=> $msg
 	);
 	$self->render('index/index', %data);
+}
+
+sub jobs_all {
+	my ($self, $jobs, $msg, %data);
+	$self = shift;
+
+	write_log("\n\n\n=====jobs_all=====");
+
+	($jobs, $msg) = jobs_list();
+
+	# Render list of jobs template "index/test.html.ep"
+	%data = (
+		title	=> 'All jobs',
+		jobs	=> $jobs,
+		msg		=> $msg
+	);
+	$self->render('index/alljobs', %data);
+}
+
+sub job_search {
+	my ($self, $pid, $line, $status, $msg, %data);
+	$self = shift;
+
+	write_log("\n\n\n=====job_search=====");
+
+	# Get info from running tasks
+	$pid = $self->param('pid');
+	($line, $status) = info_job($pid);
+	$msg = ' ';
+	if (!$status && !$line) {
+		$msg = $config->{'messages'}->{'not_exists_job'};
+	}
+	elsif (!$status && $line) {
+		$msg = $line;
+	}
+
+	# Render template "index/status.html.ep" with message
+	%data = ( 
+		title	=> "Information about pid=$pid",
+		pid		=> $pid,
+		line	=> $line,
+		msg		=> $msg
+	);
+	$self->render('index/status', %data);
 }
 
 sub job_add {
@@ -53,14 +99,10 @@ sub job_add {
 	if ($self->param('conversion_type')) {
 		# set soure/output dir variable
 		$in{'conversion_type'} = $tmp = $self->param('conversion_type');
-print "$tmp\n";
-print "$config->{'templates_dir'}/$in{'conversion_type'}.txt.ep\n";
 		if (-e "$config->{'templates_dir'}/$in{'conversion_type'}.txt.ep") {
 			$tmp =~ s/\d.*$//;
-print "$tmp\n";
 			$in{'source'} = "$config->{'exec_apps'}->{'source_dir'}/$in{'conversion_type'}.$tmp";
 		}
-print "$in{'source'}\n";
 	}
 	if ($in{'conversion_type'}) {
 		($pid, $error) = $self->create_job($in{'conversion_type'}, \%in);
@@ -101,7 +143,7 @@ sub job_status {
 	my ($self, $pid, $line, $status, $msg, %data);
 	$self = shift;
 
-write_log("\n\n\n=====job_status=====");
+	write_log("\n\n\n=====job_status=====");
 
 	# Get info from running tasks
 	$pid = $self->param('pid');
@@ -128,7 +170,7 @@ sub job_kill {
 	my ($self, $pid, $mess, $msg, $preset, %data);
 	$self = shift;
 
-write_log("\n\n\n=====job_kill=====");
+	write_log("\n\n\n=====job_kill=====");
 
 	# kill exists process
 	$pid = $self->param('pid');
@@ -159,9 +201,10 @@ sub job_done {
 	my ($self, $pid, $status, $out);
 	$self = shift;
 
+	write_log("\n\n\n=====job_done=====-$pid-=");
+
 	# get all messages & remove process 
 	$pid = $self->param('pid');
-write_log("\n\n\n=====job_done=====-$pid-=");
 
 	if ($pid) {
 		if (ref($pids{$pid}) eq 'HASH') {
