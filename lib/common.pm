@@ -588,12 +588,14 @@ sub load_balancer {
 	$out{'load'} = `w`;
 	$out{'load'} =~ /average\:(.*?)(\n|\r)/;
 	$out{'load'} = $1;
-	$out{'load'} =~ s/\s+//goi;
+	$out{'load'} =~ s/\s+/ /goi;
 	$tmp = 0;
 	map {
+		s/\,/\./goi;
+		s/(\.|\,)$//;
 		$tmp += $_;
-	} split(',', $out{'load'});
-	$out{'load'} = int(($tmp*100/3)/$out{'cpu'});
+	} split('\s', $out{'load'});
+	$out{'load'} = int(($tmp*100/$out{'cpu'}));
 
 	# how free memory (percents)
 	$out{'free_mem'} = `free -m`;
@@ -620,16 +622,16 @@ sub load_balancer {
 	delete $out{'io_tmp'};
 
 	# change jobs limit based on hdd-IO/Mem/Load average
-print "$config->{'load'} < $out{'load'} && $config->{'free_mem'} < $out{'free_mem'} && $config->{'io'} < $out{'io'} && $config->{'limit'} == ";
-print scalar(keys %pids);
-print "\n";
-	if ($config->{'load'} < $out{'load'} && $config->{'free_mem'} < $out{'free_mem'} && $config->{'io'} < $out{'io'} && $config->{'limit'} == scalar(keys %pids)) {
+	if ($config->{'load'} < $out{'load'} && $config->{'free_mem'} < $out{'free_mem'} && $config->{'io'} < $out{'io'} && scalar(keys %pids <= $config->{'limit'})) {
 		if ($config->{'limit'} > 0) { $config->{'limit'}--; }
 	}
 	else {
-# ??????????????
-		$config->{'limit'}++;
+		if ($config->{'limit'} < $config->{'limit_runung_max'}) {
+			$config->{'limit'}++;
+		}
 	}
+
+	return \%out;
 }
 
 sub run_job {

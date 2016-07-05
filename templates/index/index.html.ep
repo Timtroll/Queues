@@ -1,19 +1,43 @@
 % layout 'default', title => $title;
 
 <div id="container">
-<div>
 	<div>
-		<h2><a href="/"><%= $title %></a></h2>
+		<div class="menu">
+			<a href="/"><%= $title %></a>
+		</div>
+		<div class="load">
+			IO
+			<div class="cssProgress">
+				<div class="progress1">
+					<div class="cssProgress-bar" data-percent="<%= $load->{'io'} %>" style="transition: none; width: <%= $load->{'io'} %>%;"> <span class="cssProgress-label"><%= $load->{'io'} %>%</span> </div>
+				</div>
+			</div>
+		</div>
+		<div class="load">
+			Memory
+			<div class="cssProgress">
+				<div class="progress1">
+					<div class="cssProgress-bar" data-percent="<%= $load->{'free_mem'} %>" style="transition: none; width: <%= $load->{'free_mem'} %>%;"> <span class="cssProgress-label"><%= $load->{'free_mem'} %>%</span> </div>
+				</div>
+			</div>
+		</div>
+		<div class="load">
+			Load average
+			<div class="cssProgress">
+				<div class="progress1">
+					<div class="cssProgress-bar" data-percent="<%= $load->{'load'} %>" style="transition: none; width: <%= $load->{'load'} %>%;"> <span class="cssProgress-label"><%= $load->{'load'} %>%</span> </div>
+				</div>
+			</div>
+		</div>
+		<div class="load">
+			Limit = <%= $config->{'limit'} %>
+		</div>
+		<div class="load">
+			CPU(s) = <%= $load->{'cpu'} %>
+		</div>
 	</div>
-	<div>
-		Limit = <%= $config->{'limit'} %>
-	</div>
-	<div>IO</div>
-	<div>Memory</div>
-	<div>Load average</div>
-</div>
 % if ($msg) {
-<span style="color:red;"><%= $msg %></span><br>
+	<span style="color:red;"><%= $msg %></span><br>
 % }
 
 	<form action="/addjob" method="post">
@@ -48,8 +72,13 @@
 	<div id="rightcol" align="left">
 		<div><b>Еxecuted list</b></div>
 %	if (scalar(keys %{$done})) {
+%		my $cnt = 0;
 %		foreach (sort {$$done{$b}->{'time'} <=> $$done{$a}->{'time'}} keys %{$done}) {
+%			if ($cnt <= $config->{'limit_show_done'}) {
 		<li><a href="/status?pid=<%= $_ %>" target="_blank"><%= $_ %></a>&nbsp;&nbsp;<% if (ref($$done{$_}->{'killed'})) { %>Killed<% } %></li>
+%				if ($cnt == $config->{'limit_show_done'}) { last; }
+%			}
+%			$cnt++;
 %		}
 %	} else {
 		<li>Nothing</li>

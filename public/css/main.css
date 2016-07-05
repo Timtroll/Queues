@@ -17,6 +17,21 @@ input {
 	width: 80%;
 }
 
+.menu {
+	width: 200px; /* Width right colunm */
+	float: left;
+	vertical-align: top;
+	height: 18px;
+	font-size: 24px;
+	font-weight: bold;
+}
+.load {
+	width: 90px; /* Width right colunm */
+	float: right;
+	vertical-align: top;
+	padding-left: 10px;
+}
+
 #container {
 	width: 1024px; /* Width container */
 	margin: 0 auto; /* center align */
@@ -40,3 +55,76 @@ input {
 	margin: 0 275px 0 475px; /* padding left and right */
 	vertical-align: top;
 }
+
+/* Progress bar */
+.cssProgress {
+	width: 100%;
+	margin-bottom: 20px
+}
+
+.cssProgress .progress1, .cssProgress .progress2, .cssProgress .progress3 {
+	position: relative;
+	overflow: hidden;
+	width: 100%;
+	font-family: "Roboto", sans-serif
+}
+
+.cssProgress .cssProgress-bar {
+	display: block;
+	float: left;
+	width: 0%;
+	height: 100%;
+	background: #3798d9;
+	box-shadow: inset 0px -1px 2px rgba(0,0,0,0.1);
+	-webkit-transition: width 0.8s ease-in-out;
+	transition: width 0.8s ease-in-out
+}
+
+.cssProgress .cssProgress-label {
+	position: absolute;
+	overflow: hidden;
+	left: 0px;
+	right: 0px;
+	color: rgba(0,0,0,0.6);
+	font-size: 0.7em;
+	text-align: center;
+	text-shadow: 0px 1px rgba(0,0,0,0.3)
+}
+
+.cssProgress .cssProgress-stripes, .cssProgress .cssProgress-active, .cssProgress .cssProgress-active-right {
+	background-image: -webkit-linear-gradient(135deg, rgba(255,255,255,0.125) 25%, transparent 25%, transparent 50%, rgba(255,255,255,0.125) 50%, rgba(255,255,255,0.125) 75%, transparent 75%, transparent);
+	background-image: linear-gradient(-45deg, rgba(255,255,255,0.125) 25%, transparent 25%, transparent 50%, rgba(255,255,255,0.125) 50%, rgba(255,255,255,0.125) 75%, transparent 75%, transparent);
+	background-size: 35px 35px
+}
+
+.cssProgress .cssProgress-active {
+	-webkit-animation: cssProgressActive 2s linear infinite;
+	animation: cssProgressActive 2s linear infinite
+}
+
+.cssProgress .cssProgress-active-right {
+	-webkit-animation: cssProgressActiveRight 2s linear infinite;
+	animation: cssProgressActiveRight 2s linear infinite
+}
+
+.progress1 {
+	background-color: #EEE;
+	box-shadow: inset 0px 1px 3px rgba(0,0,0,0.2)
+}
+.progress1 .cssProgress-bar { height: 18px }
+.progress1 .cssProgress-label { line-height: 18px }
+
+.progress2 {
+	background-color: #EEE;
+	box-shadow: inset 0px 1px 3px rgba(0,0,0,0.2)
+}
+.progress2 .cssProgress-bar { height: 18px }
+.progress2 .cssProgress-label { line-height: 18px }
+
+.progress3 {
+	background-color: #EEE;
+	box-shadow: inset 0px 1px 3px rgba(0,0,0,0.2)
+}
+.progress3 .cssProgress-bar { height: 18px }
+.progress3 .cssProgress-label { line-height: 18px }
+

@@ -20,12 +20,12 @@ sub index {
 	$load = load_balancer();
 
 	%data = (
-		load	=> $load,
 		preset	=> $preset,
 		queue	=> \%queue,
 		pids	=> \%pids,
 		done	=> \%done,
 		title	=> 'Main page',
+		load	=> $load,
 		config	=> $config,
 		msg		=> $msg
 	);
@@ -33,7 +33,7 @@ sub index {
 }
 
 sub job_add {
-	my ($self, $line, $job, $tmp, $pid, $msg, $mess, $preset, $error, %data, %in);
+	my ($self, $line, $job, $tmp, $pid, $msg, $mess, $preset, $error, $load, %data, %in);
 	$self = shift;
 
 	write_log("\n\n\n=====job_add=====");
@@ -81,6 +81,8 @@ print "$in{'source'}\n";
 	($preset, $mess) = list_of_preset();
 	if ($mess) { $msg .= "<br>$mess"; }
 
+	$load = load_balancer();
+
 	# Render list of jobs template "index/test.html.ep"
 	%data = (
 		preset	=> $preset,
@@ -88,6 +90,8 @@ print "$in{'source'}\n";
 		pids	=> \%pids,
 		done	=> \%done,
 		title	=> 'Queues page',
+		load	=> $load,
+		config	=> $config,
 		msg		=> $msg
 	);
 	$self->render('index/index', %data);
