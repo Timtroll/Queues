@@ -22,8 +22,21 @@ textarea {
 }
 
 .title {
-	font-size: 13px;
+	font-size: 18px;
 	font-family: sans-serif;
+}
+.title_preset {
+	font-size: 18px;
+	font-family: sans-serif;
+	float:left;
+	padding-right: 10px;
+	padding-top: 4px;
+}
+.title_input {
+	font-size: 18px;
+	font-family: sans-serif;
+	float:left;
+
 }
 .form_com {
 	 width:70%;
@@ -174,70 +187,43 @@ textarea {
 
 /* Modal window */
 
-.modal {
-	background-image: url('http://milion.kiev.ua/epp/css/spiner.gif');
-	background-position: center;
-	background-repeat: no-repeat;
+.modalDialog {
+	position: fixed;
+	font-family: Arial, Helvetica, sans-serif;
+	top: 0;
+	right: 0;
+	bottom: 0;
+	left: 0;
+	background: rgba(0, 0, 0, 0.8);
+	z-index: 99999;
+	opacity:0;
+	-webkit-transition: opacity 200ms ease-in;
+	-moz-transition: opacity 200ms ease-in;
+	transition: opacity 200ms ease-in;
+	pointer-events: none;
 }
-
-.win {
-    background: #F2F2F2;
-    position: fixed;
-    font-family: Arial, Helvetica, sans-serif;
-    top: 0;
-    right: 0;
-    bottom: 0;
-    left: 0;
-    opacity: 0.9;
-    z-index: 77777;
-    -webkit-transition: opacity 400ms ease-in;
-    -moz-transition: opacity 400ms ease-in;
-    transition: opacity 400ms ease-in;
-    display: none;
-    pointer-events: none;
+.modalDialog:target {
+	opacity:1;
+	pointer-events: auto;
 }
-
-.win:target {
-    display: block;
-    pointer-events: auto;
-    z-index: 88888;
+.modalDialog > div {
+	width: 70%;
+	position: relative;
+	margin: 10% auto;
+	padding: 5px 20px 13px 20px;
+	border-radius: 3px;
+	background: #ffffff;
 }
-
-.win > div {
-    background: #FFFFFF;
-    width: 60%;
-    height: 90%;
-    position: relative;
-    margin: 2% auto;
-    padding: 10px;
-    border-radius: 5px;
-    border: solid 1px #CCCCCC;
-    box-shadow: 0 0 10px #CCCCCC;
-    -moz-box-shadow: 0px 0px 10px #cccccc;
-    -webkit-box-shadow: 0px 0px 10px #cccccc;
-    z-index: 99998;
-}
-
 .close {
-    background: #ffffff;
-    color: #666666;
-    line-height: 25px;
-    position: absolute;
-    left: -12px;
-    text-align: center;
-    top: -10px;
-    width: 24px;
-    text-decoration: none;
-    font-weight: bold;
-    -webkit-border-radius: 12px;
-    -moz-border-radius: 12px;
-    border-radius: 12px;
-    -moz-box-shadow: 1px 1px 3px #cccccc;
-    -webkit-box-shadow: 1px 1px 3px #cccccc;
-    box-shadow: 1px 1px 3px #cccccc;
+	line-height: 25px;
+	position: absolute;
+	right: 12px;
+	text-align: center;
+	top: 10px;
+	width: 24px;
+	text-decoration: none;
+	font-weight: bold;
 }
-
 .close:hover {
-    background: #aaaaaa;
-    color: #ffffff;
+	color: #ff0000;
 }

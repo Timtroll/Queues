@@ -4,6 +4,29 @@
 		<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
 		<link href="/css/main.css" rel="stylesheet" media="all">
 		<title><%= title %></title>
+		<script>
+		function open_frame (url) {
+			window.document.getElementById('modalframe').innerHTML = "<iframe " + "src='" + url + "'  width='100%' height='100%' frameBorder='0' style='border: 0'></iframe>"
+		}
+		function PostData (title, command, id) {
+			var xmlHttp = new XMLHttpRequest();
+			var url = "/" + command;
+			if (id) {
+				url = url + '?id=' +id;
+			}
+		    xmlHttp.open( "GET", url, false );
+		    xmlHttp.send();
+
+			var html = 'Request: ' + url + ' Bad response from server: ' + xmlHttp.status;
+			if (xmlHttp.status == 200) {
+		    	html = xmlHttp.responseText;
+		    }
+
+			window. document.getElementById('modalframe').innerHTML = html;
+			window. document.getElementById('modaltitle').innerHTML = title;
+		}
+	</script>
+
 	</head>
 	<body><%= content %></body>
 </html>

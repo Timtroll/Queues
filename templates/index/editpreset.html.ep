@@ -2,22 +2,6 @@
 
 % use Data::Dumper;
 
-<script>
-function open_frame (url) {
-	window.document.getElementById('modalframe').innerHTML = "<iframe " + "src='" + url + "'  width='100%' height='100%' frameBorder='0' style='border: 0'></iframe>"
-}
-function PostData (obj, form, command) {
-	var elm = document.createElement("input"); 
-	elm.type = "hidden";
-	elm.name = command;
-	elm.id = command;
-	elm.value = 1;
-	obj.appendChild(elm);
-alert(form+'='+command+'='+document.getElementById(command).value);
-//	document.getElementById(form).submit();
-}
-</script>
-
 <div id="container">
 	<div class="block">
 		<div class="menu">
@@ -51,32 +35,34 @@ alert(form+'='+command+'='+document.getElementById(command).value);
 
 	<hr>
 
+	<form action="/savepreset" method="post">
 	<div class="block">
 		<div class="form_com">
-			<h2><%= $id %></h2>
+			<div class="title_preset">Title:</div>
+			<input type="text" name="id" value="<%= $id %>" class="title_input form_com">
 		</div>
 		<div class="form_search">
-			<div class="div_subs"><a href=''>Test exec</a></div>
+			<div class="div_subs"><a href='#openModal' onClick="javascript:PostData('Test exec', testexec', '');">Test exec</a></div>
 			<div class="div_subs">
-				<form action="/commandtest" id="getresults" method="post">
-					<a href='#' onClick="javascript:PostData(this, 'getresults', '<%= id %>');">Get result</a>
-				</form>
+				<a href='#openModal' onClick="javascript:PostData('Get result', 'getresult', '<%= $id %>');">Get result</a>
 			</div>
 		</div>
 	</div>
 
 % if ($id) {
-	<form action="/savepreset" method="post">
+	<div class="block">
 		<textarea name="preset"><%= $preset %></textarea>
-		<input type="hidden" name="id" value="<%= $id %>">
+		<input type="hidden" name="old_id" value="<%= $id %>">
 		<button type="submit">Save</button>
-	</form>
+	</div>
 % }
+	</form>
 
-	<div id="modalopen" class="win">
-	  <div id="int">
-	    <a href="#close" title="Закрыть" class="close">X</a>
-	    <span id="modalframe"></span>
-	  </div>
+	<div id="openModal" class="modalDialog">
+		<div>
+			<a href="#close" title="Close" class="close">X</a>
+			<h2 id="modaltitle"></h2>
+			<div id="modalframe"></div>
+		</div>
 	</div>
 </div>
