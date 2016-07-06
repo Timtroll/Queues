@@ -66,6 +66,10 @@ sub startup {
 	$r->any('/killer')			->to('index#job_kill');
 	$r->any('/done')			->to('index#job_done');
 
+	$r->any('/addpreset')		->to('index#preset_add');
+	$r->any('/editpreset')		->to('index#preset_edit');
+	$r->any('/savepreset')		->to('index#preset_save');
+
 	$r->any('/alljobs')			->to('index#jobs_all');
 	$r->any('/searchjob')		->to('index#job_search');
 

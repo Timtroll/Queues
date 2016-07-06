@@ -4,7 +4,7 @@ body {
 }
 li {
 	list-style-type: none;
-	padding: 2px;
+	padding: 4px;
 }
 li:nth-child(odd) {
 	background: #eaeaea;
@@ -15,6 +15,10 @@ a {
 }
 input {
 	width: 80%;
+}
+textarea {
+	width:100%;
+	height: 600px;
 }
 
 .title {
@@ -36,6 +40,19 @@ input {
 .head {
 	min-height: 25px;
 }
+.div_right {
+	 float:right;
+}
+.div_left {
+	 float:left;
+}
+
+.div_subs {
+	width:120px;
+	float:right;
+	padding:10px;
+}
+
 .menu {
 	width: 500px; /* Width right colunm */
 	float: left;
@@ -59,20 +76,28 @@ input {
 	width: 200px; /* Width left colunm */
 	float: left;
 	vertical-align: top;
+	padding-left: 3px;
+	padding-right: 3px;
 }
 #leftcol {
 	width: 275px; /* Width left colunm */
 	float: left;
 	vertical-align: top;
+	padding-left: 3px;
+	padding-right: 3px;
 }
 #rightcol {
 	width: 275px; /* Width right colunm */
 	float: right;
 	vertical-align: top;
+	padding-left: 3px;
+	padding-right: 3px;
 }
 #centercol {
 	margin: 0 275px 0 475px; /* padding left and right */
 	vertical-align: top;
+	padding-left: 3px;
+	padding-right: 3px;
 }
 
 /* Progress bar */
@@ -147,3 +172,72 @@ input {
 .progress3 .cssProgress-bar { height: 18px }
 .progress3 .cssProgress-label { line-height: 18px }
 
+/* Modal window */
+
+.modal {
+	background-image: url('http://milion.kiev.ua/epp/css/spiner.gif');
+	background-position: center;
+	background-repeat: no-repeat;
+}
+
+.win {
+    background: #F2F2F2;
+    position: fixed;
+    font-family: Arial, Helvetica, sans-serif;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    opacity: 0.9;
+    z-index: 77777;
+    -webkit-transition: opacity 400ms ease-in;
+    -moz-transition: opacity 400ms ease-in;
+    transition: opacity 400ms ease-in;
+    display: none;
+    pointer-events: none;
+}
+
+.win:target {
+    display: block;
+    pointer-events: auto;
+    z-index: 88888;
+}
+
+.win > div {
+    background: #FFFFFF;
+    width: 60%;
+    height: 90%;
+    position: relative;
+    margin: 2% auto;
+    padding: 10px;
+    border-radius: 5px;
+    border: solid 1px #CCCCCC;
+    box-shadow: 0 0 10px #CCCCCC;
+    -moz-box-shadow: 0px 0px 10px #cccccc;
+    -webkit-box-shadow: 0px 0px 10px #cccccc;
+    z-index: 99998;
+}
+
+.close {
+    background: #ffffff;
+    color: #666666;
+    line-height: 25px;
+    position: absolute;
+    left: -12px;
+    text-align: center;
+    top: -10px;
+    width: 24px;
+    text-decoration: none;
+    font-weight: bold;
+    -webkit-border-radius: 12px;
+    -moz-border-radius: 12px;
+    border-radius: 12px;
+    -moz-box-shadow: 1px 1px 3px #cccccc;
+    -webkit-box-shadow: 1px 1px 3px #cccccc;
+    box-shadow: 1px 1px 3px #cccccc;
+}
+
+.close:hover {
+    background: #aaaaaa;
+    color: #ffffff;
+}

@@ -1,0 +1,82 @@
+% layout 'default', title => $title;
+
+% use Data::Dumper;
+
+<script>
+function open_frame (url) {
+	window.document.getElementById('modalframe').innerHTML = "<iframe " + "src='" + url + "'  width='100%' height='100%' frameBorder='0' style='border: 0'></iframe>"
+}
+function PostData (obj, form, command) {
+	var elm = document.createElement("input"); 
+	elm.type = "hidden";
+	elm.name = command;
+	elm.id = command;
+	elm.value = 1;
+	obj.appendChild(elm);
+alert(form+'='+command+'='+document.getElementById(command).value);
+//	document.getElementById(form).submit();
+}
+</script>
+
+<div id="container">
+	<div class="block">
+		<div class="menu">
+			<span class="title">
+				<a href="/" class="title">Home</a> <% if ($title) { %>/ <%= $title %><% } %>
+			</span>
+		</div>
+	</div>
+
+% if ($msg) {
+	<div class="block">
+		<span style="color:red;"><%= $msg %></span>
+	</div>
+% }
+
+	<div class="block">
+		<div class="form_com">
+			<form action="/addjob" method="post">
+				<input type="text" placeholder="example: ping google.com" name="conversion_type" value="<% if ($self->param('conversion_type')) { %><%= $self->param('conversion_type') %><% } %>">
+				<button type="submit">Command line</button>
+			</form>
+		</div>
+
+		<div class="form_search">
+			<form action="/searchjob" method="post">
+				<input type="text" placeholder="insert md5 key here" name="pid" value="<% if ($self->param('conversion_type')) { %><%= $self->param('conversion_type') %><% } %>">
+				<button type="submit">Find</button>
+			</form>
+		</div>
+	</div>
+
+	<hr>
+
+	<div class="block">
+		<div class="form_com">
+			<h2><%= $id %></h2>
+		</div>
+		<div class="form_search">
+			<div class="div_subs"><a href=''>Test exec</a></div>
+			<div class="div_subs">
+				<form action="/commandtest" id="getresults" method="post">
+					<a href='#' onClick="javascript:PostData(this, 'getresults', '<%= id %>');">Get result</a>
+				</form>
+			</div>
+		</div>
+	</div>
+
+% if ($id) {
+	<form action="/savepreset" method="post">
+		<textarea name="preset"><%= $preset %></textarea>
+		<input type="hidden" name="id" value="<%= $id %>">
+		<button type="submit">Save</button>
+	</form>
+% }
+
+	<div id="modalopen" class="win">
+	  <div id="int">
+	    <a href="#close" title="Закрыть" class="close">X</a>
+	    <span id="modalframe"></span>
+	  </div>
+	</div>
+</div>

@@ -19,7 +19,7 @@ use libbash;
 our @ISA = qw( Exporter );
 our @EXPORT = qw(
 	$config $messages %queue %pids %done 
-	&jobs_list &done_job &info_job &create_job &kill_job &get_pdf_res &load_queues &store_queues &list_of_preset &load_balancer
+	&jobs_list &done_job &info_job &create_job &kill_job &get_pdf_res &load_queues &store_queues &list_of_preset &load_balancer &edit_preset &save_preset
 	&write_log
 );
 
@@ -118,7 +118,7 @@ sub load_queues {
 
 	write_log("Load queues");
 
-	# wait while qeues are storing or moving & then create lock
+	# waitwhile qeues are storing or moving & then create lock
 	while ($config->{'lock'}) {}
 	$config->{'lock'} = 'l';
 
@@ -158,7 +158,7 @@ sub load_queue {
 		$json_xs->utf8(1);
 
 		open (FILE, "<$config->{'storage_dir'}/$type") or $status = 0;
-			 while ($line = <FILE>) {
+			while ($line = <FILE>) {
 				if ($line) {
 					$line =~ s/(\n|\r)//goi;
 					$val = $json_xs->decode($line);
@@ -189,7 +189,7 @@ sub move_job {
 
 	write_log("Move job pid='$pid' '$from_type' to '$to_type'");
 
-	# wait while qeues are loading or storing & then create lock
+	# waitwhile qeues are loading or storing & then create lock
 	while ($config->{'lock'}) {}
 	$config->{'lock'} = 'm';
 
@@ -508,6 +508,8 @@ sub kill_job {
 	my ($pid, $list, $status, $store, @list, @tmp);
 	$pid = shift;
 
+	write_log("Kill job=$pid");
+
 	# find pids of all running jobs for current pid
 	$list = ps_jobs($pid);
 
@@ -559,6 +561,8 @@ sub kill_job {
 sub list_of_preset {
 	my ($f, $mess, @list);
 
+	write_log("Get list of preset jobs");
+
 	@list = ();
 	$mess = '';
 	if (-d $config->{'templates_dir'}) {
@@ -575,15 +579,16 @@ sub list_of_preset {
 	return \@list, $mess;
 }
 
-sub jobs_list {
+sub list_jobs {
 	my ($f, @list, $mess);
+
+	write_log("Get list of executed jobs");
 
 	# read output dir
 	if (-d $config->{'exec_apps'}->{'output_dir'}) {
 		opendir(DIR, $config->{'exec_apps'}->{'output_dir'}) or $mess = "Can't open directory $config->{'exec_apps'}->{'output_dir'}: $!\n";
 			while ($f = readdir(DIR)) {
 				unless ($f =~ /^\./) {
-print "$f\n";
 					if (-d "$config->{'exec_apps'}->{'output_dir'}/$f") {
 						push @list, $f;
 					}
@@ -593,6 +598,49 @@ print "$f\n";
 	}
 
 	return \@list, $mess;
+}
+
+sub save_preset {
+	my ($id, $template, $line, $status);
+	$id = shift;
+	$template = shift;
+
+	# change caret to unix style
+	$template =~ s/\r//goi;
+
+	$status = 1;
+	if (-d $config->{'templates_dir'}) {
+		open (FILE, ">$config->{'templates_dir'}/$id.txt.ep") or $status = 2;
+			 print FILE "$template\n";
+		close (FILE) or $status = 2;
+	}
+	else {
+		$status = 0;
+	}
+
+	return $template, $status;
+}
+
+sub edit_preset {
+	my ($id, $template, $line, $status);
+	$id = shift;
+
+	$status = 1;
+	if (-e "$config->{'templates_dir'}/$id.txt.ep") {
+		open (FILE, "<$config->{'templates_dir'}/$id.txt.ep") or $status = 2;
+			while ($line = <FILE>) {
+				if ($line) {
+					$line =~ s/(\n|\r)/\n/goi;
+					$template .= $line;
+				}
+			};
+		close (FILE) or $status = 2;
+	}
+	else {
+		$status = 0;
+	}
+
+	return $template, $status;
 }
 
 ############ Subs ############

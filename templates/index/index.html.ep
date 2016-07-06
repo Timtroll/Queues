@@ -66,7 +66,7 @@
 		<div class="head"><b>Job templates</b></div>
 %	if (scalar(@{$preset})) {
 %		foreach (sort {$a cmp $b} @{$preset}) {
-		<li><a href="/addjob?conversion_type=<%= $_ %>"><%= $_ %></a></li>
+		<li><a href="/addjob?conversion_type=<%= $_ %>"><%= $_ %></a><div class="div_right"><a href="/editpreset?id=<%= $_ %>">Edit</a></div></li>
 %		}
 %	} else {
 		<li>Nothing</li>
@@ -79,7 +79,7 @@
 		</div>
 %	if (scalar(keys %{$queue})) {
 %		foreach (sort {$$queue{$b}->{'time'} <=> $$queue{$a}->{'time'}} keys %{$queue}) {
-		<li><%= $_ %>&nbsp;&nbsp;<a href="/killer?pid=<%= $_ %>">X</a></li>
+		<li><%= $_ %> <div class="div_right"><a href="/killer?pid=<%= $_ %>">X</a></div></li>
 %		}
 %	} else {
 		<li>Nothing</li>
@@ -94,7 +94,7 @@
 %		my $cnt = 0;
 %		foreach (sort {$$done{$b}->{'time'} <=> $$done{$a}->{'time'}} keys %{$done}) {
 %			if ($cnt <= $config->{'limit_show_done'}) {
-		<li><a href="/status?pid=<%= $_ %>"><%= $_ %></a>&nbsp;&nbsp;<% if (ref($$done{$_}->{'killed'})) { %>Killed<% } %></li>
+		<li><a href="/status?pid=<%= $_ %>"><%= $_ %></a><% if (ref($$done{$_}->{'killed'})) { %> <div class="div_right">Killed</div><% } %></li>
 %				if ($cnt == $config->{'limit_show_done'}) { last; }
 %			}
 %			$cnt++;
@@ -110,7 +110,7 @@
 		</div>
 %	if (scalar(keys %{$pids})) {
 %		foreach (sort {$$pids{$b}->{'time'} <=> $$pids{$a}->{'time'}} keys %{$pids}) {
-		<li><a href="/status?pid=<%= $_ %>"><%= $_ %></a>&nbsp;&nbsp;<a href="/killer?pid=<%= $_ %>">X</a></li>
+		<li><a href="/status?pid=<%= $_ %>"><%= $_ %></a> <div class="div_right"><a href="/killer?pid=<%= $_ %>">X</a></div></li>
 %		}
 %	} else {
 		<li>Nothing</li>
