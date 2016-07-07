@@ -327,4 +327,16 @@ sub preset_edit {
 	$self->render('index/editpreset', %data);
 }
 
+sub test_exec {
+	%data = (
+		preset	=> $preset,
+		id		=> $id,
+		title	=> 'Edit preset job page',
+		config	=> $config,
+		msg		=> $msg
+	);
+	$self->render('index/testexec', %data);
+
+}
+
 1;
