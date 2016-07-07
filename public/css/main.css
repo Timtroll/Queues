@@ -80,6 +80,10 @@ textarea {
 	padding-left: 10px;
 }
 
+#exec {
+	width: 100%; /* Width container */
+	margin: 0 auto; /* center align */
+}
 #container {
 	width: 1024px; /* Width container */
 	margin: 0 auto; /* center align */

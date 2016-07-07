@@ -74,7 +74,7 @@ sub startup {
 	$r->any('/searchjob')		->to('index#job_search');
 
 	$r->any('/testexec')		->to('index#test_exec');
-	$r->any('/testresult')		->to('index#test_result');
+	$r->any('/scriptresult')	->to('index#script_result');
 
 #	$r->any('/logout')			->to('auth#logout');
 #	my $auth = $r->under()		->to('auth#login');

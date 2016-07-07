@@ -19,7 +19,7 @@ use libbash;
 our @ISA = qw( Exporter );
 our @EXPORT = qw(
 	$config $messages %queue %pids %done 
-	&jobs_list &done_job &info_job &create_job &kill_job &get_pdf_res &load_queues &store_queues &list_of_preset &load_balancer &edit_preset &save_preset
+	&jobs_list &done_job &info_job &create_job &kill_job &get_pdf_res &load_queues &store_queues &list_of_preset &load_balancer &edit_preset &save_preset &exec_test
 	&write_log
 );
 
@@ -641,6 +641,28 @@ sub edit_preset {
 	}
 
 	return $template, $status;
+}
+
+sub exec_test {
+	my ($self, $job, $cmd, $mess, $in);
+	($self, $job, $in) = @_;
+
+	if (-e "$config->{'templates_dir'}/$job.txt.ep") {
+		$cmd = $self->render_to_string(	
+			"$config->{'templates_jobs'}/$job",
+			format		=> 'txt',
+			in			=> $in,
+			%{$config->{'exec_apps'}}
+		);
+		$mess = `$cmd`;
+		$mess =~ s/(\n|\r)/<br>/goi;
+		$cmd =~ s/(\n|\r)/<br>/goi;
+	}
+	else {
+		$mess = $config->{'messages'}->{'not_exists_preset'}.$job;
+	}
+
+	return $mess, $cmd;
 }
 
 ############ Subs ############

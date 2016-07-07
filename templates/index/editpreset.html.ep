@@ -42,9 +42,9 @@
 			<input type="text" name="id" value="<%= $id %>" class="title_input form_com">
 		</div>
 		<div class="form_search">
-			<div class="div_subs"><a href='#openModal' onClick="javascript:PostData('Test exec', 'testexec', '');">Test exec</a></div>
+			<div class="div_subs"><a href='#openModal' onClick="javascript:PostData('Test exec', 'testexec', '<%= $id %>');">Test exec</a></div>
 			<div class="div_subs">
-				<a href='#openModal' onClick="javascript:PostData('Get result', 'getresult', '<%= $id %>');">Get result</a>
+				<a href='#openModal' onClick="javascript:PostData('Get result', 'scriptresult', '<%= $id %>');">Get result</a>
 			</div>
 		</div>
 	</div>

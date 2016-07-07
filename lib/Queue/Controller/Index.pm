@@ -328,12 +328,23 @@ sub preset_edit {
 }
 
 sub test_exec {
+	my ($self, $id, $result, $msg, $cmd, %data, %in);
+	$self = shift;
+
+	# get data for exec
+	$id = $self->param('id');
+
+	# prepare fake request
+	%in = (
+	);
+print "==$id==\n";
+	($result, $cmd) = $self->exec_test($id, \%in);
+
 	%data = (
-		preset	=> $preset,
-		id		=> $id,
-		title	=> 'Edit preset job page',
+		result	=> $result,
+		cmd		=> $cmd,
+		title	=> 'Result of job',
 		config	=> $config,
-		msg		=> $msg
 	);
 	$self->render('index/testexec', %data);
 
