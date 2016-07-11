@@ -33,7 +33,7 @@ sub queue_put {
 		}
 
 		# decode json->obj if exists
-		if (($_ eq 'size') && $in{$_} && !$error) {
+		if (($_ eq 'options') && (ref($in{$_}) eq 'HASH') && !$error) {
 			$json_xs = JSON::XS->new();
 			$json_xs->utf8(1);
 			$in{$_} = $json_xs->decode($in{$_});

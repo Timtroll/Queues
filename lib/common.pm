@@ -9,7 +9,7 @@ use Time::HiRes qw(gettimeofday);
 use Data::Dumper;
 
 use Exporter();
-use vars qw( @ISA @EXPORT @EXPORT_OK $config $messages %queue %pids %done );
+use vars qw( @ISA @EXPORT @EXPORT_OK $config $conversion_type $messages %queue %pids %done );
 
 use utf8;
 $| = 1;
@@ -18,7 +18,7 @@ use libbash;
 
 our @ISA = qw( Exporter );
 our @EXPORT = qw(
-	$config $messages %queue %pids %done 
+	$config $conversion_type $messages %queue %pids %done 
 	&jobs_list &done_job &info_job &create_job &kill_job &get_pdf_res &load_queues &store_queues &list_of_preset &load_balancer &edit_preset &save_preset &exec_test
 	&write_log
 );
@@ -687,7 +687,7 @@ sub load_balancer {
 			$tmp += $_;
 		}
 	} split('\s', $out{'load'});
-	$out{'load'} = int(($tmp*100/$out{'cpu'}));
+	$out{'load'} = int(($tmp*100/3));
 
 	# how free memory (percents)
 	$out{'free_mem'} = `free -m`;

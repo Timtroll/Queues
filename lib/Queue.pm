@@ -10,7 +10,7 @@ use Mojolicious::Plugin::Config;
 use common;
 use Data::Dumper;
 
-has [qw( db config messages queue pids done)];
+has [qw( db config messages queue pids done conversion_type)];
 
 # This method will run once at server start
 sub startup {
@@ -22,7 +22,10 @@ sub startup {
 
 	# Documentation browser under "/perldoc"
 	$self->plugin('PODRenderer');
+
+	# load configs
 	$config = $self->plugin('Config');
+	$conversion_type = $self->plugin('Config' => {file => './types.conf'});
 
 	$self->sessions->default_expiration(86400);
 

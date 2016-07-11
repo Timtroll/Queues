@@ -33,10 +33,10 @@ url: "/put"
 	conversion_type:	pdf2jpg,					(conversion type)
 	source:				./test.pdf,					(source file for conversion)
 	output:				/home/ouput_dir/,			(output directory for result file/es)
-	quality:			100,						(quality output file/es)
-	resolution:			72,							(resolution output file/es in dpi)
-	password:			textpass,					(password for pdf file)
-	size: {
+	options: {
+		quality:			100,					(quality output file/es)
+		resolution:			72,						(resolution output file/es in dpi)
+		password:			textpass,				(password for pdf file)
 		width:	2000,								(width size of output file/es)
 		height:	2000								(height size of output file/es)
 	}
